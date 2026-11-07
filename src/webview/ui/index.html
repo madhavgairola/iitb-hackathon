@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrueForge Agent Workspace</title>
+  <style>
+    :root {
+      --bg: var(--vscode-editor-background, #1e1e1e);
+      --fg: var(--vscode-editor-foreground, #d4d4d4);
+      --border: var(--vscode-panel-border, #2d2d2d);
+      --accent: var(--vscode-button-background, #0e639c);
+      --accent-hover: var(--vscode-button-hoverBackground, #1177bb);
+      --card-bg: var(--vscode-sideBar-background, #252526);
+      --diff-add: #2ea043;
+      --diff-del: #f85149;
+      --diff-add-bg: rgba(46, 160, 67, 0.15);
+      --diff-del-bg: rgba(248, 81, 73, 0.15);
+      --font-mono: var(--vscode-editor-font-family, Consolas, monospace);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+      font-size: var(--vscode-font-size, 13px);
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header & Navigation Tabs */
+    header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      background-color: var(--card-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #333;
+      color: #aaa;
+    }
+    .status-badge.online { background: #134e2c; color: #4ade80; }
+    .status-badge.offline { background: #451a1a; color: #f87171; }
+
+    nav {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--card-bg);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 4px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--fg);
+      opacity: 0.7;
+      cursor: pointer;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+
+    .tab-btn:hover { opacity: 1; }
+    .tab-btn.active {
+      opacity: 1;
+      border-bottom-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Main Tab Content Views */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tab-view { display: none; flex-direction: column; height: 100%; gap: 12px; }
+    .tab-view.active { display: flex; }
+
+    /* Workspace / Chat View */
+    .stream-container {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px;
+      background: var(--card-bg);
+      white-space: pre-wrap;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .stream-container:empty::before {
+      content: 'Agent responses and turn output will stream here...';
+      color: #666;
+      font-style: italic;
+    }
+
+    .input-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .prompt-box {
+      width: 100%;
+      height: 80px;
+      padding: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 4px;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 12px;
+    }
+    .prompt-box:focus { outline: 1px solid var(--accent); }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    button.btn {
+      padding: 6px 14px;
+      border-radius: 3px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 12px;
+    }
+    button.btn:hover { background: var(--accent-hover); }
+
+    button.btn-danger {
+      background: #d32f2f;
+    }
+    button.btn-danger:hover { background: #b71c1c; }
+
+    button.btn-secondary {
+      background: #3a3d41;
+    }
+    button.btn-secondary:hover { background: #4e5257; }
+
+    /* Activity Timeline View */
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timeline-item {
+      padding: 8px 10px;
+      border-radius: 4px;
+      border-left: 3px solid var(--border);
+      background: var(--card-bg);
+      font-size: 12px;
+    }
+    .timeline-item.thinking { border-left-color: #8b5cf6; }
+    .timeline-item.searching { border-left-color: #06b6d4; }
+    .timeline-item.reading { border-left-color: #3b82f6; }
+    .timeline-item.tool_call { border-left-color: #f59e0b; }
+    .timeline-item.tool_result { border-left-color: #10b981; }
+    .timeline-item.proposing { border-left-color: #ec4899; }
+    .timeline-item.error { border-left-color: #ef4444; }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .timeline-time { color: #888; font-size: 10px; }
+    .timeline-details { font-family: var(--font-mono); font-size: 11px; color: #aaa; margin-top: 4px; word-break: break-all; }
+
+    /* Context Inspector View */
+    .budget-bar-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .budget-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .context-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .context-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+    }
+
+    .context-file {
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: #9cdcfe;
+      font-size: 11px;
+    }
+
+    .context-reason {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    /* Change Review Hub View */
+    .edit-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+
+    .edit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .edit-file {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: #4fc1ff;
+    }
+
+    .hunk-box {
+      border: 1px solid #333;
+      background: #181818;
+      border-radius: 3px;
+      margin-top: 8px;
+      padding: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      overflow-x: auto;
+    }
+
+    .diff-line-add { color: var(--diff-add); background: var(--diff-add-bg); }
+    .diff-line-del { color: var(--diff-del); background: var(--diff-del-bg); }
+    .diff-line-ctx { color: #888; }
+
+    .hunk-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .badge-accepted { color: #4ade80; font-size: 10px; }
+    .badge-rejected { color: #f87171; font-size: 10px; }
+    .badge-pending { color: #fbbf24; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>⚡ TrueForge Agent</span>
+    </div>
+    <div id="statusBadge" class="status-badge">Checking...</div>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-tab="workspaceTab">Workspace</button>
+    <button class="tab-btn" data-tab="timelineTab">Timeline</button>
+    <button class="tab-btn" data-tab="contextTab">Context</button>
+    <button class="tab-btn" data-tab="reviewTab">Changes (<span id="editCount">0</span>)</button>
+  </nav>
+
+  <main>
+    <!-- Tab 1: Agent Workspace -->
+    <div id="workspaceTab" class="tab-view active">
+      <div id="streamContainer" class="stream-container"></div>
+      <div class="input-section">
+        <textarea
+          id="promptInput"
+          class="prompt-box"
+          placeholder="Ask TrueForge agent or use @file and @symbol mentions..."
+        ></textarea>
+        <div class="btn-row">
+          <button id="sendBtn" class="btn">Execute Run</button>
+          <button id="cancelBtn" class="btn btn-danger">Cancel</button>
+          <button id="undoBtn" class="btn btn-secondary">Undo Last</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Activity Timeline -->
+    <div id="timelineTab" class="tab-view">
+      <div id="timelineList" class="timeline-list">
+        <div class="timeline-item thinking">
+          <div class="timeline-header">
+            <span>Ready for commands</span>
+            <span class="timeline-time">System</span>
+          </div>
+          <div class="timeline-details">Awaiting user instruction...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Context Inspector -->
+    <div id="contextTab" class="tab-view">
+      <div class="budget-bar-container">
+        <div class="budget-header">
+          <span>Token Budget</span>
+          <span id="budgetLabel">0 / 8000 tokens</span>
+        </div>
+        <div class="progress-track">
+          <div id="budgetProgress" class="progress-fill"></div>
+        </div>
+      </div>
+      <div id="contextList" class="context-list">
+        <div style="color: #666; font-style: italic; padding: 8px;">No context assembled yet. Run a prompt with @file or keywords.</div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Change Review Hub -->
+    <div id="reviewTab" class="tab-view">
+      <div id="reviewList">
+        <div style="color: #666; font-style: italic; padding: 8px;">No pending changes. Propose edits via agent or inline edit.</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+
+    // DOM Elements
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabViews = document.querySelectorAll('.tab-view');
+    const statusBadge = document.getElementById('statusBadge');
+    const streamContainer = document.getElementById('streamContainer');
+    const promptInput = document.getElementById('promptInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const timelineList = document.getElementById('timelineList');
+    const budgetLabel = document.getElementById('budgetLabel');
+    const budgetProgress = document.getElementById('budgetProgress');
+    const contextList = document.getElementById('contextList');
+    const reviewList = document.getElementById('reviewList');
+    const editCount = document.getElementById('editCount');
+
+    // Tab Navigation
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach((b) => b.classList.remove('active'));
+        tabViews.forEach((v) => v.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Send Message
+    sendBtn.addEventListener('click', () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+      streamContainer.textContent = '';
+      vscode.postMessage({ type: 'sendMessage', prompt });
+    });
+
+    // Cancel Run
+    cancelBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'cancelRun' });
+    });
+
+    // Undo Edit
+    undoBtn.addEventListener('click', () => {
+      vscode.postMessage({ type: 'undoEdit' });
+    });
+
+    // Handle messages from Extension Host
+    window.addEventListener('message', (event) => {
+      const msg = event.data;
+      switch (msg.type) {
+        case 'healthStatus':
+          if (msg.online) {
+            statusBadge.className = 'status-badge online';
+            statusBadge.textContent = 'TrueForge Online';
+          } else {
+            statusBadge.className = 'status-badge offline';
+            statusBadge.textContent = 'TrueForge Offline';
+          }
+          break;
+
+        case 'streamDelta':
+          streamContainer.textContent += msg.text;
+          streamContainer.scrollTop = streamContainer.scrollHeight;
+          break;
+
+        case 'timelineEvent':
+          renderTimelineEntry(msg.entry);
+          break;
+
+        case 'contextInspected':
+          renderContext(msg.items, msg.budget);
+          break;
+
+        case 'stagedEdits':
+          renderEdits(msg.edits);
+          break;
+
+        case 'turnDone':
+          if (msg.success) {
+            renderTimelineEntry({
+              id: 'done-' + Date.now(),
+              timestamp: Date.now(),
+              kind: 'done',
+              title: msg.usedFallback ? 'Run completed (using fallback model)' : 'Run completed successfully',
+              details: 'Turn execution finished.',
+            });
+          } else {
+            renderTimelineEntry({
+              id: 'err-' + Date.now(),
+              timestamp: Date.now(),
+              kind: 'error',
+              title: 'Run failed',
+              details: msg.error || 'Unknown error',
+            });
+          }
+          break;
+      }
+    });
+
+    function renderTimelineEntry(entry) {
+      const item = document.createElement('div');
+      item.className = 'timeline-item ' + (entry.kind || 'thinking');
+      const timeStr = new Date(entry.timestamp || Date.now()).toLocaleTimeString();
+      item.innerHTML = `
+        <div class="timeline-header">
+          <span>${escapeHtml(entry.title)}</span>
+          <span class="timeline-time">${timeStr}</span>
+        </div>
+        ${entry.details ? `<div class="timeline-details">${escapeHtml(entry.details)}</div>` : ''}
+      `;
+      timelineList.appendChild(item);
+      timelineList.scrollTop = timelineList.scrollHeight;
+    }
+
+    function renderContext(items, budget) {
+      budgetLabel.textContent = `${budget.usedTokens} / ${budget.maxTokens} tokens (${items.length} files selected)`;
+      const pct = Math.min(100, Math.round((budget.usedTokens / budget.maxTokens) * 100));
+      budgetProgress.style.width = pct + '%';
+
+      if (!items || items.length === 0) {
+        contextList.innerHTML = '<div style="color: #888; font-style: italic;">No files selected in budget.</div>';
+        return;
+      }
+
+      contextList.innerHTML = items
+        .map(
+          (item) => `
+        <div class="context-card">
+          <div class="context-file">${escapeHtml(item.file)} <span style="color: #888; font-size: 10px;">(~${item.tokens} tokens)</span></div>
+          <div class="context-reason">${escapeHtml(item.reason)}</div>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    function renderEdits(edits) {
+      editCount.textContent = edits.length;
+      if (!edits || edits.length === 0) {
+        reviewList.innerHTML = '<div style="color: #666; font-style: italic; padding: 8px;">No pending changes.</div>';
+        return;
+      }
+
+      reviewList.innerHTML = edits
+        .map(
+          (edit) => `
+        <div class="edit-card">
+          <div class="edit-header">
+            <span class="edit-file">${escapeHtml(edit.file)}</span>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn" style="padding: 2px 8px; font-size: 10px;" onclick="applyEdit('${edit.id}', true)">Accept All</button>
+              <button class="btn btn-danger" style="padding: 2px 8px; font-size: 10px;" onclick="rejectEdit('${edit.id}')">Reject All</button>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #aaa; margin-bottom: 6px;">Instruction: ${escapeHtml(edit.instruction)}</div>
+          ${edit.hunks
+            .map(
+              (h) => `
+            <div class="hunk-box">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #888;">Hunk @@ -${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines} @@</span>
+                <span class="badge-${h.status}">${h.status}</span>
+              </div>
+              <div>
+                ${h.lines
+                  .map((l) => {
+                    const cls = l.startsWith('+') ? 'diff-line-add' : l.startsWith('-') ? 'diff-line-del' : 'diff-line-ctx';
+                    return `<div class="${cls}">${escapeHtml(l)}</div>`;
+                  })
+                  .join('')}
+              </div>
+              <div class="hunk-actions">
+                <button class="btn" style="padding: 2px 6px; font-size: 10px;" onclick="acceptHunk('${edit.id}', '${h.id}')">Accept Hunk</button>
+                <button class="btn btn-danger" style="padding: 2px 6px; font-size: 10px;" onclick="rejectHunk('${edit.id}', '${h.id}')">Reject Hunk</button>
+              </div>
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    function acceptHunk(editId, hunkId) {
+      vscode.postMessage({ type: 'acceptHunk', editId, hunkId });
+    }
+
+    function rejectHunk(editId, hunkId) {
+      vscode.postMessage({ type: 'rejectHunk', editId, hunkId });
+    }
+
+    function applyEdit(editId, acceptAll) {
+      vscode.postMessage({ type: 'applyEdit', editId, acceptAll });
+    }
+
+    function rejectEdit(editId) {
+      vscode.postMessage({ type: 'rejectEdit', editId });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Trigger initial healthcheck
+    vscode.postMessage({ type: 'checkHealth' });
+  </script>
+</body>
+</html>

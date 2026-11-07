@@ -3,10 +3,12 @@ import { VSCodeWorkspaceProvider } from './workspace/vscodeProvider';
 import { DiffStagingManager } from './diff/staging';
 import { LocalMcpServer } from './mcp/server';
 import { TrueForgeHarnessClient } from './harness/client';
+import { TrueForgeAgentViewProvider } from './webview/viewProvider';
 
 let mcpServer: LocalMcpServer | undefined;
 let harnessClient: TrueForgeHarnessClient | undefined;
 let stagingManager: DiffStagingManager | undefined;
+let viewProvider: TrueForgeAgentViewProvider | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
   console.log('TrueForge AI Coding Agent is activating...');
@@ -15,6 +17,19 @@ export async function activate(context: vscode.ExtensionContext) {
   stagingManager = new DiffStagingManager(workspaceProvider);
   mcpServer = new LocalMcpServer(workspaceProvider, stagingManager);
   harnessClient = new TrueForgeHarnessClient();
+
+  // Register Webview View Provider for Agent Workspace Sidebar
+  viewProvider = new TrueForgeAgentViewProvider(
+    context.extensionUri,
+    harnessClient,
+    stagingManager,
+    workspaceProvider
+  );
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider('trueforge.agentView', viewProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    })
+  );
 
   // Start local MCP server
   try {
