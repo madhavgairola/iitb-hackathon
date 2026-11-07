@@ -129,9 +129,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const provider = await vscode.window.showQuickPick(
       [
+        {
+          label: 'requesty',
+          description: 'Requesty Gateway (router.requesty.ai - gpt-4o, claude-3-7-sonnet)',
+        },
         { label: 'gemini', description: 'Google Gemini (gemini-2.5-pro, gemini-2.0-flash)' },
-        { label: 'openai', description: 'OpenAI (gpt-4o, gpt-4o-mini)' },
-        { label: 'anthropic', description: 'Anthropic (claude-3-7-sonnet)' },
+        { label: 'openai', description: 'OpenAI Direct (gpt-4o, gpt-4o-mini)' },
+        { label: 'anthropic', description: 'Anthropic Direct (claude-3-7-sonnet)' },
       ],
       { placeHolder: 'Select Model Provider to configure in TrueForge' }
     );
@@ -141,13 +145,15 @@ export async function activate(context: vscode.ExtensionContext) {
     const apiKey = await vscode.window.showInputBox({
       title: `Enter API Key for ${provider.label}`,
       password: true,
-      placeHolder: 'API key will be sent securely to local TrueForge harness',
+      placeHolder: 'e.g. rqsty-sk-... or sk-...',
     });
 
     if (!apiKey) return;
 
     const models =
-      provider.label === 'gemini'
+      provider.label === 'requesty'
+        ? ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'google/gemini-2.5-pro']
+        : provider.label === 'gemini'
         ? ['gemini-2.5-pro', 'gemini-2.0-flash']
         : provider.label === 'openai'
         ? ['gpt-4o', 'gpt-4o-mini']

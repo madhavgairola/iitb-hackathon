@@ -61,20 +61,37 @@ export class TrueForgeHarnessClient {
   }
 
   /**
-   * Configure or update model provider credentials.
+   * Configure or update model provider credentials (including Requesty router or custom providers).
    */
   public async configureModelProvider(
     providerName: string,
     apiKey: string,
-    models: string[]
+    models: string[],
+    baseUrl?: string
   ): Promise<void> {
-    await this.client.settings.modelProviders.createOrUpdate({
-      manifest: {
-        auth: { apiKey },
-        models: models.map((m) => ({ name: m })),
-        name: providerName,
-      },
-    });
+    const isRequesty = providerName === 'requesty' || apiKey.startsWith('rqsty-');
+    const resolvedBaseUrl = baseUrl || (isRequesty ? 'https://router.requesty.ai/v1' : undefined);
+
+    if (isRequesty || resolvedBaseUrl) {
+      await this.client.settings.modelProviders.createOrUpdate({
+        manifest: {
+          type: 'openai',
+          auth: { apiKey },
+          baseUrl: resolvedBaseUrl,
+          models: models.map((m) => ({ name: m })),
+        },
+      });
+    } else {
+      await this.client.settings.modelProviders.createOrUpdate({
+        manifest: {
+          type: 'custom',
+          name: providerName,
+          auth: { apiKey },
+          baseUrl: 'https://api.openai.com/v1',
+          models: models.map((m) => ({ name: m })),
+        },
+      });
+    }
   }
 
   /**
