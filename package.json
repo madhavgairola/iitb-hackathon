@@ -1,0 +1,81 @@
+{
+  "name": "trueforge-coding-agent",
+  "displayName": "TrueForge AI Coding Agent",
+  "description": "Intelligent, repository-aware coding agent for VS Code powered by TrueForge harness",
+  "version": "0.1.0",
+  "publisher": "trueforge-team",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "trueforge-agent-sidebar",
+          "title": "TrueForge Agent",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "trueforge-agent-sidebar": [
+        {
+          "type": "webview",
+          "id": "trueforge.agentView",
+          "name": "Agent Workspace"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "trueforge.startChat",
+        "title": "TrueForge: Open Agent Workspace"
+      },
+      {
+        "command": "trueforge.inlineEdit",
+        "title": "TrueForge: Inline Edit Selection"
+      },
+      {
+        "command": "trueforge.cancelTurn",
+        "title": "TrueForge: Cancel Current Run"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "trueforge.inlineEdit",
+        "key": "ctrl+k",
+        "mac": "cmd+k",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "compile": "tsc -p ./",
+    "watch": "node esbuild.js --watch",
+    "build": "node esbuild.js --production",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "@truefoundry/trueforge-sdk": "^0.184.1",
+    "diff": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.0",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.0.7"
+  }
+}
