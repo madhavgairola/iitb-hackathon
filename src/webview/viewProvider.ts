@@ -199,6 +199,12 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
           details: err.message || String(err),
         },
       });
+      this.postMessage({
+        type: 'turnDone',
+        success: false,
+        error: `Agent initialization failed: ${err.message || String(err)}`,
+      });
+      return;
     }
 
     // 3. Obtain or Create TrueForge Session

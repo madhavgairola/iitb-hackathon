@@ -99,35 +99,55 @@ export class TrueForgeHarnessClient {
     modelOverride?: string
   ): Promise<TrueForge.GetAgentResponse> {
     const modelToUse = modelOverride || this.primaryModel;
+
+    // Only attach MCP servers that are actually registered and configured in TrueForge
+    let activeMcpServers: string[] = [];
+    try {
+      const registered = await this.client.settings.mcpServers.list();
+      const registeredNames = new Set((registered.data || []).map((s: any) => s.name));
+      activeMcpServers = mcpServerNames.filter((s) => registeredNames.has(s));
+    } catch {
+      activeMcpServers = [];
+    }
+
     const spec: TrueForge.AgentSpec = {
       instructions,
       model: { name: modelToUse },
-      mcpServers: mcpServerNames.map((srv) => ({
-        name: srv,
-        enableTools: ['@all'],
-        preload: true,
-      })),
+      ...(activeMcpServers.length > 0
+        ? {
+            mcpServers: activeMcpServers.map((srv) => ({
+              name: srv,
+              enableTools: ['@all'],
+              preload: true,
+            })),
+          }
+        : {}),
       config: {
         iterationLimit: 60,
       },
     };
 
     try {
+      const list = await this.client.agents.list();
+      const existing = (list.data || []).find((a: any) => a.name === name);
+      if (existing) {
+        return await this.client.agents.update(existing.id, {
+          description: 'VS Code Intelligent Coding Agent',
+          manifest: spec,
+        });
+      }
       return await this.client.agents.create({
         name,
         description: 'VS Code Intelligent Coding Agent',
         manifest: spec,
       });
     } catch {
-      // If agent already exists, update its spec
-      try {
-        return await this.client.agents.update(name, {
-          description: 'VS Code Intelligent Coding Agent',
-          manifest: spec,
-        });
-      } catch {
-        return await this.client.agents.get(name);
-      }
+      // Fallback direct create if listing is not supported
+      return await this.client.agents.create({
+        name,
+        description: 'VS Code Intelligent Coding Agent',
+        manifest: spec,
+      });
     }
   }
 
@@ -135,13 +155,16 @@ export class TrueForgeHarnessClient {
    * Switch the model of an existing agent (used for Resilience / Fallback).
    */
   public async switchAgentModel(agentName: string, newModelFqn: string): Promise<void> {
-    const existing = await this.client.agents.get(agentName);
+    const list = await this.client.agents.list();
+    const existing = (list.data || []).find((a: any) => a.name === agentName);
+    if (!existing) return;
+
     const updatedSpec: TrueForge.AgentSpec = {
-      ...existing.data.manifest,
+      ...existing.manifest,
       model: { name: newModelFqn },
     };
-    await this.client.agents.update(agentName, {
-      description: existing.data.description,
+    await this.client.agents.update(existing.id, {
+      description: existing.description,
       manifest: updatedSpec,
     });
   }
