@@ -18,7 +18,7 @@ export class TrueForgeHarnessClient {
   private activeTurnAbortController?: AbortController;
 
   constructor(config: HarnessConfig = {}) {
-    this.baseUrl = config.baseUrl || 'http://127.0.0.1:8000';
+    this.baseUrl = config.baseUrl || 'http://127.0.0.1:8790';
     this.primaryModel = config.primaryModel || 'openai/gpt-4o';
     this.fallbackModel = config.fallbackModel || 'gemini/gemini-2.5-pro';
     this.client = new TrueForge({
