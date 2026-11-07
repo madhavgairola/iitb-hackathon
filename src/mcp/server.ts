@@ -86,7 +86,7 @@ export class LocalMcpServer {
 
         // SSE endpoint for TrueForge connection
         if (url.pathname === '/sse' && req.method === 'GET') {
-          const transport = new SSEServerTransport('/messages', res);
+          const transport = new SSEServerTransport(`http://localhost:${this.port}/messages`, res);
           const sessionId = transport.sessionId;
           this.transports.set(sessionId, transport);
 
@@ -98,8 +98,8 @@ export class LocalMcpServer {
           return;
         }
 
-        // Message post endpoint for client RPC calls
-        if (url.pathname === '/messages' && req.method === 'POST') {
+        // Message post endpoint for client RPC calls (supports both /messages and /sse)
+        if ((url.pathname === '/messages' || url.pathname === '/sse') && req.method === 'POST') {
           const sessionId = url.searchParams.get('sessionId');
           const transport = sessionId ? this.transports.get(sessionId) : undefined;
 

@@ -19,7 +19,7 @@ export class TrueForgeHarnessClient {
 
   constructor(config: HarnessConfig = {}) {
     this.baseUrl = config.baseUrl || 'http://localhost:8790';
-    this.primaryModel = config.primaryModel || 'openai/gpt-4o';
+    this.primaryModel = config.primaryModel || 'requesty/gpt-4o';
     this.fallbackModel = config.fallbackModel || 'gemini/gemini-2.5-pro';
     this.client = new TrueForge({
       baseUrl: this.baseUrl,
@@ -72,21 +72,44 @@ export class TrueForgeHarnessClient {
     const isRequesty = providerName === 'requesty' || apiKey.startsWith('rqsty-');
     const resolvedBaseUrl = baseUrl || (isRequesty ? 'https://router.requesty.ai/v1' : undefined);
 
-    await this.client.settings.modelProviders.createOrUpdate({
-      manifest: {
-        type: 'openai',
-        auth: { apiKey },
-        baseUrl: resolvedBaseUrl,
-        models: models.map((m) => ({
-          name: m,
-          modelId: isRequesty && !m.startsWith('openai/') ? `openai/${m}` : m,
-          properties: {
-            contextLength: 128000,
-            maxOutputTokens: 16000,
-          },
-        })),
-      },
-    });
+    if (isRequesty) {
+      await this.client.settings.modelProviders.createOrUpdate({
+        manifest: {
+          type: 'custom',
+          name: 'requesty',
+          auth: { apiKey },
+          baseUrl: 'https://router.requesty.ai/v1',
+          models: models.map((m) => {
+            const cleanName = m.replace(/^requesty\//, '').replace(/^openai\//, '');
+            return {
+              name: cleanName,
+              modelId: `openai/${cleanName}`,
+              properties: {
+                contextLength: 128000,
+                maxOutputTokens: 16000,
+              },
+            };
+          }),
+        },
+      });
+      this.primaryModel = 'requesty/gpt-4o';
+    } else {
+      await this.client.settings.modelProviders.createOrUpdate({
+        manifest: {
+          type: 'openai',
+          auth: { apiKey },
+          baseUrl: resolvedBaseUrl,
+          models: models.map((m) => ({
+            name: m,
+            modelId: m,
+            properties: {
+              contextLength: 128000,
+              maxOutputTokens: 16000,
+            },
+          })),
+        },
+      });
+    }
   }
 
   /**
