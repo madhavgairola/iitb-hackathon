@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    fileParallelism: false,
     alias: {
       vscode: path.resolve(__dirname, 'tests/__mocks__/vscode.ts'),
     },

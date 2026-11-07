@@ -209,7 +209,7 @@ export class TrueForgeHarnessClient {
       {
         input: [
           {
-            content: [{ type: 'text', text: userPrompt }],
+            content: userPrompt,
             role: 'user',
           },
         ],
