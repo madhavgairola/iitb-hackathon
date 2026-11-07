@@ -127,14 +127,14 @@ export class LocalMcpServer {
         reject(err);
       });
 
-      this.httpServer.listen(this.port, '127.0.0.1', () => {
+      this.httpServer.listen(this.port, '0.0.0.0', () => {
         resolve(this.getEndpointUrl());
       });
     });
   }
 
   public getEndpointUrl(): string {
-    return `http://127.0.0.1:${this.port}/sse`;
+    return `http://localhost:${this.port}/sse`;
   }
 
   public getPort(): number {
