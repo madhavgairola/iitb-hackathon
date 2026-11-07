@@ -4,11 +4,14 @@ import { DiffStagingManager } from './diff/staging';
 import { LocalMcpServer } from './mcp/server';
 import { TrueForgeHarnessClient } from './harness/client';
 import { TrueForgeAgentViewProvider } from './webview/viewProvider';
+import { TrueForgeDiffContentProvider } from './inline/diffProvider';
+import { InlineEditController } from './inline/inlineEdit';
 
 let mcpServer: LocalMcpServer | undefined;
 let harnessClient: TrueForgeHarnessClient | undefined;
 let stagingManager: DiffStagingManager | undefined;
 let viewProvider: TrueForgeAgentViewProvider | undefined;
+let inlineController: InlineEditController | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
   console.log('TrueForge AI Coding Agent is activating...');
@@ -17,6 +20,16 @@ export async function activate(context: vscode.ExtensionContext) {
   stagingManager = new DiffStagingManager(workspaceProvider);
   mcpServer = new LocalMcpServer(workspaceProvider, stagingManager);
   harnessClient = new TrueForgeHarnessClient();
+  inlineController = new InlineEditController(harnessClient, stagingManager, workspaceProvider);
+
+  // Register TrueForge Diff Preview Text Document Content Provider
+  const diffProvider = TrueForgeDiffContentProvider.getInstance();
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(
+      TrueForgeDiffContentProvider.SCHEME,
+      diffProvider
+    )
+  );
 
   // Register Webview View Provider for Agent Workspace Sidebar
   viewProvider = new TrueForgeAgentViewProvider(
@@ -70,26 +83,16 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.executeCommand('workbench.view.extension.trueforge-agent-sidebar');
   });
 
-  // Inline Edit command (Ctrl+K)
+  // Inline Edit command (Ctrl+K / Cmd+K)
   const inlineEditCmd = vscode.commands.registerCommand('trueforge.inlineEdit', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       vscode.window.showWarningMessage('No active editor found for inline editing.');
       return;
     }
-
-    const selection = editor.selection;
-    const selectedText = editor.document.getText(selection);
-    const instruction = await vscode.window.showInputBox({
-      prompt: 'Describe the modification you want the agent to make to this code:',
-      placeHolder: "e.g. 'Treat values off and n as false as well, case-insensitively'",
-    });
-
-    if (!instruction) {
-      return;
+    if (inlineController) {
+      await inlineController.executeInlineEdit(editor);
     }
-
-    vscode.window.showInformationMessage(`TrueForge: Generating inline edit for instruction: "${instruction}"...`);
   });
 
   // Undo Last Edit command
