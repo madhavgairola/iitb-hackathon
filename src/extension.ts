@@ -6,12 +6,14 @@ import { TrueForgeHarnessClient } from './harness/client';
 import { TrueForgeAgentViewProvider } from './webview/viewProvider';
 import { TrueForgeDiffContentProvider } from './inline/diffProvider';
 import { InlineEditController } from './inline/inlineEdit';
+import { TrueForgeStatusBarIndicator } from './statusbar/indicator';
 
 let mcpServer: LocalMcpServer | undefined;
 let harnessClient: TrueForgeHarnessClient | undefined;
 let stagingManager: DiffStagingManager | undefined;
 let viewProvider: TrueForgeAgentViewProvider | undefined;
 let inlineController: InlineEditController | undefined;
+let statusBarIndicator: TrueForgeStatusBarIndicator | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
   console.log('TrueForge AI Coding Agent is activating...');
@@ -21,6 +23,11 @@ export async function activate(context: vscode.ExtensionContext) {
   mcpServer = new LocalMcpServer(workspaceProvider, stagingManager);
   harnessClient = new TrueForgeHarnessClient();
   inlineController = new InlineEditController(harnessClient, stagingManager, workspaceProvider);
+
+  // Status Bar Indicator
+  statusBarIndicator = new TrueForgeStatusBarIndicator(harnessClient);
+  statusBarIndicator.start();
+  context.subscriptions.push({ dispose: () => statusBarIndicator?.dispose() });
 
   // Register TrueForge Diff Preview Text Document Content Provider
   const diffProvider = TrueForgeDiffContentProvider.getInstance();
@@ -58,6 +65,7 @@ export async function activate(context: vscode.ExtensionContext) {
       )
       .then(() => {
         console.log('Successfully registered vscode-editor MCP server with TrueForge.');
+        statusBarIndicator?.updateStatus();
       })
       .catch((err) => {
         console.warn('Note: TrueForge server not reachable on startup for MCP registration:', err.message);
@@ -71,6 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const healthCmd = vscode.commands.registerCommand('trueforge.checkHealth', async () => {
     if (!harnessClient) return;
     const health = await harnessClient.checkHealth();
+    statusBarIndicator?.updateStatus();
     if (health.online) {
       vscode.window.showInformationMessage(`TrueForge Status: Online (${health.message})`);
     } else {
@@ -119,6 +128,9 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export async function deactivate() {
+  if (statusBarIndicator) {
+    statusBarIndicator.dispose();
+  }
   if (mcpServer) {
     await mcpServer.stop();
     console.log('TrueForge Local MCP Server stopped.');
