@@ -123,7 +123,48 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(healthCmd, startChatCmd, inlineEditCmd, undoCmd, cancelTurnCmd);
+  // Configure Model API Key command
+  const configKeyCmd = vscode.commands.registerCommand('trueforge.configureApiKey', async () => {
+    if (!harnessClient) return;
+
+    const provider = await vscode.window.showQuickPick(
+      [
+        { label: 'gemini', description: 'Google Gemini (gemini-2.5-pro, gemini-2.0-flash)' },
+        { label: 'openai', description: 'OpenAI (gpt-4o, gpt-4o-mini)' },
+        { label: 'anthropic', description: 'Anthropic (claude-3-7-sonnet)' },
+      ],
+      { placeHolder: 'Select Model Provider to configure in TrueForge' }
+    );
+
+    if (!provider) return;
+
+    const apiKey = await vscode.window.showInputBox({
+      title: `Enter API Key for ${provider.label}`,
+      password: true,
+      placeHolder: 'API key will be sent securely to local TrueForge harness',
+    });
+
+    if (!apiKey) return;
+
+    const models =
+      provider.label === 'gemini'
+        ? ['gemini-2.5-pro', 'gemini-2.0-flash']
+        : provider.label === 'openai'
+        ? ['gpt-4o', 'gpt-4o-mini']
+        : ['claude-3-7-sonnet'];
+
+    try {
+      await harnessClient.configureModelProvider(provider.label, apiKey, models);
+      vscode.window.showInformationMessage(
+        `Successfully configured ${provider.label} in local TrueForge harness!`
+      );
+      statusBarIndicator?.updateStatus();
+    } catch (err: any) {
+      vscode.window.showErrorMessage(`Failed to configure model in TrueForge: ${err.message}`);
+    }
+  });
+
+  context.subscriptions.push(healthCmd, startChatCmd, inlineEditCmd, undoCmd, cancelTurnCmd, configKeyCmd);
   console.log('TrueForge AI Coding Agent activated successfully.');
 }
 

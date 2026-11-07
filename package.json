@@ -47,6 +47,10 @@
       {
         "command": "trueforge.cancelTurn",
         "title": "TrueForge: Cancel Current Run"
+      },
+      {
+        "command": "trueforge.configureApiKey",
+        "title": "TrueForge: Configure Model API Key"
       }
     ],
     "keybindings": [
