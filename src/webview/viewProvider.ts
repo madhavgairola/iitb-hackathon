@@ -289,6 +289,19 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
       edits: this.stagingManager.getPendingEdits(),
     });
 
+    if (turnResult.usedFallback) {
+      this.postMessage({
+        type: 'timelineEvent',
+        entry: {
+          id: 'fallback-' + Date.now(),
+          timestamp: Date.now(),
+          kind: 'warning',
+          title: 'Resilience Fallback Triggered',
+          details: 'Primary model encountered provider error. Automatically failed over to secondary model without dropping session.',
+        },
+      });
+    }
+
     this.postMessage({
       type: 'turnDone',
       success: turnResult.success,

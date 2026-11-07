@@ -124,6 +124,7 @@ export class TrueForgeHarnessClient {
         : {}),
       config: {
         iterationLimit: 60,
+        dynamicSubAgents: { enabled: false },
       },
     };
 
@@ -261,6 +262,9 @@ export class TrueForgeHarnessClient {
 
     for await (const event of stream) {
       await onEvent(event);
+      if (event.type === 'turn.done' && (event as any).state?.status === 'error') {
+        throw new Error((event as any).state?.message || 'TrueForge turn completed with error state');
+      }
     }
   }
 
