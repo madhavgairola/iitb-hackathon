@@ -10,7 +10,6 @@ import { WorkspaceProvider } from '../workspace/types';
 import { DiffStagingManager } from '../diff/staging';
 
 export class LocalMcpServer {
-  private server: Server;
   private httpServer?: http.Server;
   private dispatcher: ToolDispatcher;
   private transports: Map<string, SSEServerTransport> = new Map();
@@ -18,8 +17,10 @@ export class LocalMcpServer {
 
   constructor(workspace: WorkspaceProvider, staging: DiffStagingManager) {
     this.dispatcher = new ToolDispatcher(workspace, staging);
+  }
 
-    this.server = new Server(
+  private createMcpServer(): Server {
+    const server = new Server(
       {
         name: 'vscode-editor-mcp',
         version: '0.1.0',
@@ -31,23 +32,21 @@ export class LocalMcpServer {
       }
     );
 
-    this.registerHandlers();
-  }
-
-  private registerHandlers(): void {
     // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: TOOL_DEFINITIONS,
       };
     });
 
     // Execute tool call
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       const result = await this.dispatcher.dispatch(name, args || {});
       return result;
     });
+
+    return server;
   }
 
   /**
@@ -90,11 +89,14 @@ export class LocalMcpServer {
           const sessionId = transport.sessionId;
           this.transports.set(sessionId, transport);
 
+          const serverInstance = this.createMcpServer();
+
           req.on('close', () => {
             this.transports.delete(sessionId);
+            serverInstance.close().catch(() => {});
           });
 
-          await this.server.connect(transport);
+          await serverInstance.connect(transport);
           return;
         }
 
