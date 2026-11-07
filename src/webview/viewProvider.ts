@@ -237,10 +237,16 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
       promptWithContext,
       async (event: any) => {
         // Map TrueForge SSE events directly to Timeline & Chat Stream
-        if (event.type === 'model_message_delta') {
-          const deltaText = event.delta?.content || '';
-          this.postMessage({ type: 'streamDelta', text: deltaText });
-        } else if (event.type === 'tool_approval_required') {
+        if (event.type === 'model.message.delta' || event.type === 'model_message_delta') {
+          const deltaText = event.content ?? event.delta?.content ?? '';
+          if (deltaText) {
+            this.postMessage({ type: 'streamDelta', text: deltaText });
+          }
+        } else if (event.type === 'model.message' || event.type === 'model_message') {
+          if (event.content && typeof event.content === 'string') {
+            this.postMessage({ type: 'streamDelta', text: event.content });
+          }
+        } else if (event.type === 'tool.approval.required' || event.type === 'tool_approval_required') {
           this.postMessage({
             type: 'timelineEvent',
             entry: {
@@ -251,15 +257,15 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
               details: JSON.stringify(event.tool?.arguments || {}),
             },
           });
-        } else if (event.type === 'tool_response') {
+        } else if (event.type === 'tool.response' || event.type === 'tool_response') {
           this.postMessage({
             type: 'timelineEvent',
             entry: {
               id: 'tool-resp-' + Date.now(),
               timestamp: Date.now(),
               kind: 'tool_result',
-              title: `Tool Completed: ${event.tool?.name || 'tool'}`,
-              details: event.response?.slice?.(0, 150) || 'Done',
+              title: `Tool Completed: ${event.tool?.name || event.toolCallId || 'tool'}`,
+              details: (event.content || event.response || 'Done').slice(0, 150),
             },
           });
           // Update staged edits if propose_edit was called

@@ -652,8 +652,18 @@
         .replace(/'/g, '&#039;');
     }
 
-    // Trigger initial healthcheck
-    vscode.postMessage({ type: 'checkHealth' });
+    // Initial healthcheck & periodic poll every 5s
+    function checkHealth() {
+      vscode.postMessage({ type: 'checkHealth' });
+    }
+    checkHealth();
+    setInterval(checkHealth, 5000);
+
+    if (statusBadge) {
+      statusBadge.style.cursor = 'pointer';
+      statusBadge.title = 'Click to re-check connection';
+      statusBadge.addEventListener('click', checkHealth);
+    }
   </script>
 </body>
 </html>

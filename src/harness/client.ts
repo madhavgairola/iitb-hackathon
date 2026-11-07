@@ -72,26 +72,21 @@ export class TrueForgeHarnessClient {
     const isRequesty = providerName === 'requesty' || apiKey.startsWith('rqsty-');
     const resolvedBaseUrl = baseUrl || (isRequesty ? 'https://router.requesty.ai/v1' : undefined);
 
-    if (isRequesty || resolvedBaseUrl) {
-      await this.client.settings.modelProviders.createOrUpdate({
-        manifest: {
-          type: 'openai',
-          auth: { apiKey },
-          baseUrl: resolvedBaseUrl,
-          models: models.map((m) => ({ name: m })),
-        },
-      });
-    } else {
-      await this.client.settings.modelProviders.createOrUpdate({
-        manifest: {
-          type: 'custom',
-          name: providerName,
-          auth: { apiKey },
-          baseUrl: 'https://api.openai.com/v1',
-          models: models.map((m) => ({ name: m })),
-        },
-      });
-    }
+    await this.client.settings.modelProviders.createOrUpdate({
+      manifest: {
+        type: 'openai',
+        auth: { apiKey },
+        baseUrl: resolvedBaseUrl,
+        models: models.map((m) => ({
+          name: m,
+          modelId: isRequesty && !m.startsWith('openai/') ? `openai/${m}` : m,
+          properties: {
+            contextLength: 128000,
+            maxOutputTokens: 16000,
+          },
+        })),
+      },
+    });
   }
 
   /**
@@ -118,15 +113,21 @@ export class TrueForgeHarnessClient {
     };
 
     try {
-      // Check if agent exists
-      return await this.client.agents.get(name);
-    } catch {
-      // Create new agent
       return await this.client.agents.create({
         name,
         description: 'VS Code Intelligent Coding Agent',
         manifest: spec,
       });
+    } catch {
+      // If agent already exists, update its spec
+      try {
+        return await this.client.agents.update(name, {
+          description: 'VS Code Intelligent Coding Agent',
+          manifest: spec,
+        });
+      } catch {
+        return await this.client.agents.get(name);
+      }
     }
   }
 
@@ -136,11 +137,11 @@ export class TrueForgeHarnessClient {
   public async switchAgentModel(agentName: string, newModelFqn: string): Promise<void> {
     const existing = await this.client.agents.get(agentName);
     const updatedSpec: TrueForge.AgentSpec = {
-      ...existing.manifest,
+      ...existing.data.manifest,
       model: { name: newModelFqn },
     };
     await this.client.agents.update(agentName, {
-      description: existing.description,
+      description: existing.data.description,
       manifest: updatedSpec,
     });
   }
@@ -159,11 +160,10 @@ export class TrueForgeHarnessClient {
     }
 
     const session = await this.client.sessions.create({
-      agentName,
-      title: 'VS Code Coding Session',
+      agent: { name: agentName },
     });
-    this.activeSessionId = session.id;
-    return session.id;
+    this.activeSessionId = session.data.id;
+    return session.data.id;
   }
 
   /**
@@ -226,8 +226,8 @@ export class TrueForgeHarnessClient {
       {
         input: [
           {
+            type: 'user.message',
             content: userPrompt,
-            role: 'user',
           },
         ],
       },
