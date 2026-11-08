@@ -42,8 +42,11 @@ export class ContextAssembler {
 
     let match;
     while ((match = fileMentionRegex.exec(userPrompt)) !== null) {
-      const file = match[1] || match[2];
-      explicitFiles.add(file);
+      const rawFile = match[1] || match[2];
+      const cleanFile = rawFile.replace(/[?!,;:.)]+$/, '');
+      if (cleanFile) {
+        explicitFiles.add(cleanFile);
+      }
     }
     while ((match = symbolMentionRegex.exec(userPrompt)) !== null) {
       explicitSymbols.add(match[1]);

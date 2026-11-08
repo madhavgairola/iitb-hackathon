@@ -58,6 +58,17 @@ export class NodeWorkspaceProvider implements WorkspaceProvider {
         return;
       }
 
+      // Prioritize src, tests, lib directories first for code-intelligence relevance
+      const dirPriority = (name: string): number => {
+        const lower = name.toLowerCase();
+        if (lower === 'src' || lower === 'lib' || lower === 'app') return 1;
+        if (lower === 'tests' || lower === 'test') return 2;
+        if (lower.endsWith('.py') || lower.endsWith('.ts') || lower.endsWith('.js')) return 3;
+        return 4;
+      };
+
+      entries.sort((a, b) => dirPriority(a.name) - dirPriority(b.name));
+
       for (const entry of entries) {
         if (results.length >= limit) break;
         if (
@@ -65,6 +76,11 @@ export class NodeWorkspaceProvider implements WorkspaceProvider {
           entry.name === 'node_modules' ||
           entry.name === '__pycache__' ||
           entry.name === 'dist' ||
+          entry.name === 'build' ||
+          entry.name === '.venv' ||
+          entry.name === 'venv' ||
+          entry.name === 'env' ||
+          entry.name === '.tox' ||
           entry.name === 'package-lock.json'
         ) {
           continue;
@@ -92,7 +108,7 @@ export class NodeWorkspaceProvider implements WorkspaceProvider {
   ): Promise<SearchResult[]> {
     const maxResults = options?.maxResults || 50;
     const results: SearchResult[] = [];
-    const files = await this.listFiles({ pattern: options?.filePattern, limit: 300 });
+    const files = await this.listFiles({ pattern: options?.filePattern, limit: 1000 });
 
     const regex = options?.isRegex
       ? new RegExp(query, 'gi')

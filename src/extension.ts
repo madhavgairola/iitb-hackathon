@@ -21,7 +21,17 @@ export async function activate(context: vscode.ExtensionContext) {
   const workspaceProvider = new VSCodeWorkspaceProvider();
   stagingManager = new DiffStagingManager(workspaceProvider);
   mcpServer = new LocalMcpServer(workspaceProvider, stagingManager);
-  harnessClient = new TrueForgeHarnessClient();
+
+  const tfConfig = vscode.workspace.getConfiguration('trueforge');
+  const serverUrl = tfConfig.get<string>('serverUrl') || process.env.TRUEFORGE_SERVER_URL || 'http://localhost:8790';
+  const primaryModel = tfConfig.get<string>('primaryModel') || process.env.TRUEFORGE_PRIMARY_MODEL || 'requesty/gpt-4o';
+  const fallbackModel = tfConfig.get<string>('secondaryModel') || process.env.TRUEFORGE_FALLBACK_MODEL || 'gemini/gemini-2.5-pro';
+
+  harnessClient = new TrueForgeHarnessClient({
+    baseUrl: serverUrl,
+    primaryModel,
+    fallbackModel,
+  });
   inlineController = new InlineEditController(harnessClient, stagingManager, workspaceProvider);
 
   // Status Bar Indicator

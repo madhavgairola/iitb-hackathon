@@ -53,6 +53,26 @@
         "title": "TrueForge: Configure Model API Key"
       }
     ],
+    "configuration": {
+      "title": "TrueForge Coding Agent",
+      "properties": {
+        "trueforge.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:8790",
+          "description": "URL of the local TrueForge daemon instance."
+        },
+        "trueforge.primaryModel": {
+          "type": "string",
+          "default": "requesty/gpt-4o",
+          "description": "Primary model used by TrueForge coding agent (e.g., requesty/gpt-4o, openai/gpt-4o)."
+        },
+        "trueforge.secondaryModel": {
+          "type": "string",
+          "default": "gemini/gemini-2.5-pro",
+          "description": "Configurable secondary / fallback model for resilience (Task C)."
+        }
+      }
+    },
     "keybindings": [
       {
         "command": "trueforge.inlineEdit",

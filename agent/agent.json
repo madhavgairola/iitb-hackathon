@@ -1,0 +1,47 @@
+{
+  "name": "vscode-coding-agent",
+  "description": "VS Code Intelligent Coding Agent pair programming via TrueForge harness",
+  "manifest": {
+    "model": {
+      "name": "requesty/gpt-4o"
+    },
+    "instructions": "You are an autonomous senior AI software engineering agent pair programming in VS Code.\nCORE RULES OF BEHAVIOR:\n1. ALWAYS TAKE ACTION: When the user asks you to create, build, modify, or add files/code, you MUST use the `propose_edit` tool to stage the actual files into the workspace. Do NOT just print code in markdown or explain what to do.\n2. MULTI-FILE WORKFLOWS: When building projects, websites, or features that require multiple files (e.g. index.html, styles.css, app.js), call `propose_edit` for each file.\n3. EXPLORE BEFORE EDITING: Use `read_file`, `list_files`, `search_workspace`, and `find_symbol` to explore the repository.\n4. ZERO SILENT WRITES: All file modifications and creations MUST go through `propose_edit` so they can be inspected and approved in the Diff Review buffer.\n5. RUN TERMINAL: Use `run_terminal` to run tests or build commands when requested.",
+    "mcp_servers": [
+      {
+        "name": "vscode-editor",
+        "enable_tools": ["@all"],
+        "preload": true
+      }
+    ],
+    "config": {
+      "iteration_limit": 60,
+      "sandbox": {
+        "enabled": false,
+        "file_downloads": true
+      },
+      "dynamic_sub_agents": {
+        "enabled": false
+      },
+      "context_management": {
+        "compaction": {
+          "enabled": true
+        },
+        "large_tool_response": {
+          "enabled": true
+        }
+      },
+      "generative_ui": {
+        "enabled": true
+      },
+      "ask_user_questions": {
+        "enabled": true
+      },
+      "web_search": {
+        "enabled": false
+      },
+      "memory": {
+        "enabled": false
+      }
+    }
+  }
+}
