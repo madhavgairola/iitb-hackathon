@@ -100,6 +100,38 @@
       cursor: pointer;
     }
 
+    /* Main Content & Tabs */
+    #mainContent {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tab-view {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      overflow-y: auto;
+      height: 100%;
+    }
+    .tab-view.active {
+      display: flex;
+    }
+
+    .tab-view-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #141417;
+      font-weight: 600;
+      font-size: 12px;
+      color: #d4d4d8;
+      flex-shrink: 0;
+    }
+
     /* Main Chat Stream Container */
     #chatFeed {
       flex: 1;
@@ -109,6 +141,138 @@
       flex-direction: column;
       gap: 20px;
       scroll-behavior: smooth;
+    }
+
+    /* Timeline View */
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .timeline-item {
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-left: 3px solid #3b82f6;
+      font-size: 12px;
+    }
+    .timeline-item.thinking { border-left-color: #8b5cf6; }
+    .timeline-item.tool_call { border-left-color: #f59e0b; }
+    .timeline-item.tool_result { border-left-color: #10b981; }
+    .timeline-item.error { border-left-color: #ef4444; }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .timeline-time { color: #71717a; font-size: 10px; }
+    .timeline-details { font-family: var(--font-mono); font-size: 11px; color: #a1a1aa; margin-top: 4px; word-break: break-all; }
+
+    /* Context Inspector View */
+    .budget-bar-container {
+      background: #18181b;
+      border: 1px solid #27272a;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin: 12px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: #27272a;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #2563eb;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .context-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 12px 12px 12px;
+    }
+
+    .context-card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .context-file {
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: #93c5fd;
+      font-size: 11.5px;
+      cursor: pointer;
+    }
+    .context-file:hover { text-decoration: underline; }
+
+    .context-reason {
+      font-size: 11px;
+      color: #a1a1aa;
+      margin-top: 4px;
+    }
+
+    /* Bottom Navigation Bar */
+    .bottom-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      border-top: 1px solid var(--border);
+      background: #121214;
+      padding: 5px 8px;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+
+    .bottom-tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #71717a;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 6px 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .bottom-tab-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #e4e4e7;
+    }
+    .bottom-tab-btn.active {
+      color: #60a5fa;
+      background: rgba(37, 99, 235, 0.12);
+      font-weight: 600;
+    }
+
+    .tab-badge {
+      background: #2563eb;
+      color: #fff;
+      font-size: 9.5px;
+      padding: 1px 5px;
+      border-radius: 10px;
+      font-weight: 600;
     }
 
     /* Welcome Zero-State */
@@ -632,17 +796,59 @@
     </div>
   </header>
 
-  <!-- Chat Stream Feed -->
-  <main id="chatFeed">
-    <div class="zero-state" id="zeroState">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-      <div class="zero-title">How can I help you code today?</div>
-      <div class="zero-subtitle">Ask questions, generate features, or use @file and @symbol to reference code.</div>
+  <!-- Main Views Container -->
+  <main id="mainContent">
+    <!-- View 1: Chat Stream Feed -->
+    <div id="chatTab" class="tab-view active">
+      <div id="chatFeed">
+        <div class="zero-state" id="zeroState">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <div class="zero-title">How can I help you code today?</div>
+          <div class="zero-subtitle">Ask questions, generate features, or use @file and @symbol to reference code.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 2: Timeline View -->
+    <div id="timelineTab" class="tab-view">
+      <div class="tab-view-header">
+        <span>Activity Timeline</span>
+        <span style="font-size: 11px; color: #71717a;">Live TrueForge session events</span>
+      </div>
+      <div id="timelineList" class="timeline-list">
+        <div style="color: #666; font-style: italic; padding: 8px;">No activity yet. Run a prompt in Chat.</div>
+      </div>
+    </div>
+
+    <!-- View 3: Context Inspector View -->
+    <div id="contextTab" class="tab-view">
+      <div class="tab-view-header">
+        <span>Explainable Context Budget</span>
+        <span id="budgetLabel" style="font-size: 11px; color: #a1a1aa;">0 / 8000 tokens</span>
+      </div>
+      <div class="budget-bar-container">
+        <div class="progress-track">
+          <div id="budgetProgress" class="progress-fill"></div>
+        </div>
+      </div>
+      <div id="contextList" class="context-list">
+        <div style="color: #666; font-style: italic; padding: 8px;">No context assembled yet. Mention files with @file or symbols with @symbol.</div>
+      </div>
+    </div>
+
+    <!-- View 4: Changes Review Hub View -->
+    <div id="changesTab" class="tab-view">
+      <div class="tab-view-header">
+        <span>Pending Changes (<span id="changesTabCount">0</span>)</span>
+      </div>
+      <div id="changesFullList" style="padding: 12px; overflow-y: auto;">
+        <div style="color: #666; font-style: italic;">No pending changes. Proposed edits will appear here.</div>
+      </div>
     </div>
   </main>
 
-  <!-- Input Wrapper -->
-  <div class="input-wrapper">
+  <!-- Input Wrapper (above bottom nav) -->
+  <div class="input-wrapper" id="inputWrapper">
     <div id="autocompletePopup" class="autocomplete-popup" style="display: none;"></div>
     <div class="input-card">
       <textarea
@@ -671,6 +877,26 @@
     </div>
   </div>
 
+  <!-- Bottom Navigation Bar (below typing area) -->
+  <nav class="bottom-nav">
+    <button class="bottom-tab-btn active" data-tab="chatTab">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+    </button>
+    <button class="bottom-tab-btn" data-tab="timelineTab">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Timeline
+    </button>
+    <button class="bottom-tab-btn" data-tab="contextTab">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Context <span id="bottomContextCount" class="tab-badge" style="display: none;">0</span>
+    </button>
+    <button class="bottom-tab-btn" data-tab="changesTab">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Changes <span id="bottomChangesCount" class="tab-badge" style="display: none;">0</span>
+    </button>
+  </nav>
+
   <script>
     const vscode = acquireVsCodeApi();
 
@@ -688,6 +914,35 @@
     const autocompletePopup = document.getElementById('autocompletePopup');
     const filePillBtn = document.getElementById('filePillBtn');
     const symbolPillBtn = document.getElementById('symbolPillBtn');
+    const bottomTabBtns = document.querySelectorAll('.bottom-tab-btn');
+    const tabViews = document.querySelectorAll('.tab-view');
+    const timelineList = document.getElementById('timelineList');
+    const budgetLabel = document.getElementById('budgetLabel');
+    const budgetProgress = document.getElementById('budgetProgress');
+    const contextList = document.getElementById('contextList');
+    const changesFullList = document.getElementById('changesFullList');
+    const bottomContextCount = document.getElementById('bottomContextCount');
+    const bottomChangesCount = document.getElementById('bottomChangesCount');
+    const changesTabCount = document.getElementById('changesTabCount');
+
+    // Bottom Navigation Tab Switching
+    bottomTabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetTabId = btn.dataset.tab;
+        bottomTabBtns.forEach((b) => b.classList.remove('active'));
+        tabViews.forEach((v) => v.classList.remove('active'));
+        btn.classList.add('active');
+        const view = document.getElementById(targetTabId);
+        if (view) view.classList.add('active');
+      });
+    });
+
+    if (pendingBadge) {
+      pendingBadge.addEventListener('click', () => {
+        const changesBtn = document.querySelector('.bottom-tab-btn[data-tab="changesTab"]');
+        if (changesBtn) changesBtn.click();
+      });
+    }
 
     let cachedFiles = [];
     let currentSuggestions = [];
@@ -1225,12 +1480,55 @@
         case 'timelineEvent':
           if (msg.entry) {
             addThinkingStep(`${msg.entry.title}: ${msg.entry.details || ''}`, msg.entry.kind === 'error' ? '❌' : '⚡');
+
+            if (timelineList) {
+              const emptyMsg = timelineList.querySelector('div[style*="font-style: italic"]');
+              if (emptyMsg) emptyMsg.remove();
+              const item = document.createElement('div');
+              item.className = 'timeline-item ' + (msg.entry.kind || 'thinking');
+              const timeStr = new Date(msg.entry.timestamp || Date.now()).toLocaleTimeString();
+              item.innerHTML = `
+                <div class="timeline-header">
+                  <span>${escapeHtml(msg.entry.title)}</span>
+                  <span class="timeline-time">${timeStr}</span>
+                </div>
+                ${msg.entry.details ? `<div class="timeline-details">${escapeHtml(msg.entry.details)}</div>` : ''}
+              `;
+              timelineList.appendChild(item);
+              timelineList.scrollTop = timelineList.scrollHeight;
+            }
           }
           break;
 
         case 'contextInspected':
           if (msg.items && msg.budget) {
             addThinkingStep(`Context: ${msg.items.length} files assembled (${msg.budget.usedTokens} / ${msg.budget.maxTokens} tokens)`, '📁');
+
+            if (budgetLabel) {
+              budgetLabel.textContent = `${msg.budget.usedTokens} / ${msg.budget.maxTokens} tokens (${msg.items.length} files)`;
+            }
+            if (budgetProgress) {
+              const pct = Math.min(100, Math.round((msg.budget.usedTokens / msg.budget.maxTokens) * 100));
+              budgetProgress.style.width = pct + '%';
+            }
+            if (bottomContextCount) {
+              bottomContextCount.textContent = msg.items.length;
+              bottomContextCount.style.display = msg.items.length > 0 ? 'inline-block' : 'none';
+            }
+            if (contextList && msg.items.length > 0) {
+              contextList.innerHTML = msg.items
+                .map(
+                  (item) => `
+                <div class="context-card">
+                  <div class="context-file" onclick="openFileInEditor('${escapeHtml(item.file)}')">
+                    📄 ${escapeHtml(item.file)} <span style="color: #71717a; font-size: 10px;">(~${item.tokens} tok)</span>
+                  </div>
+                  <div class="context-reason">${escapeHtml(item.reason)}</div>
+                </div>
+              `
+                )
+                .join('');
+            }
           }
           break;
 
@@ -1252,6 +1550,13 @@
       } else {
         pendingBadge.style.display = 'none';
       }
+
+      if (changesTabCount) changesTabCount.textContent = edits.length;
+      if (bottomChangesCount) {
+        bottomChangesCount.textContent = edits.length;
+        bottomChangesCount.style.display = edits.length > 0 ? 'inline-block' : 'none';
+      }
+      renderFullChangesTab(edits);
 
       // Check if there is an active assistant block to attach the inline review widget
       if (!currentAssistantRow) return;
@@ -1356,6 +1661,57 @@
     }
     function rejectEdit(editId) {
       vscode.postMessage({ type: 'rejectEdit', editId });
+    }
+
+    function renderFullChangesTab(edits) {
+      if (!changesFullList) return;
+      if (!edits || edits.length === 0) {
+        changesFullList.innerHTML = '<div style="color: #666; font-style: italic;">No pending changes. Proposed edits will appear here.</div>';
+        return;
+      }
+
+      changesFullList.innerHTML = edits
+        .map(
+          (edit) => `
+        <div class="staged-review-card" style="margin-bottom: 12px;">
+          <div class="review-top-bar">
+            <span class="review-title" onclick="openFileInEditor('${escapeHtml(edit.file)}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              ${escapeHtml(edit.file)}
+            </span>
+            <div style="display: flex; gap: 6px;">
+              <button class="diff-btn diff-btn-primary" onclick="applyEdit('${edit.id}', true)">Accept All</button>
+              <button class="diff-btn diff-btn-danger" onclick="rejectEdit('${edit.id}')">Reject</button>
+            </div>
+          </div>
+          <div style="margin-top: 8px;">
+            ${edit.hunks
+              .map(
+                (h) => `
+              <div class="hunk-box">
+                <div style="color: #71717a; margin-bottom: 4px; font-size: 10px;">
+                  Hunk @@ -${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines} @@
+                  <span style="float: right; color: ${h.status === 'accepted' ? '#4ade80' : h.status === 'rejected' ? '#f87171' : '#fbbf24'};">${h.status}</span>
+                </div>
+                ${h.lines
+                  .map((l) => {
+                    const cls = l.startsWith('+') ? 'diff-line-add' : l.startsWith('-') ? 'diff-line-del' : 'diff-line-ctx';
+                    return `<div class="${cls}">${escapeHtml(l)}</div>`;
+                  })
+                  .join('')}
+                <div class="diff-actions">
+                  <button class="diff-btn diff-btn-primary" style="padding: 2px 6px; font-size: 10px;" onclick="acceptHunk('${edit.id}', '${h.id}')">Accept Hunk</button>
+                  <button class="diff-btn diff-btn-danger" style="padding: 2px 6px; font-size: 10px;" onclick="rejectHunk('${edit.id}', '${h.id}')">Reject Hunk</button>
+                </div>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+        </div>
+      `
+        )
+        .join('');
     }
 
     function escapeHtml(str) {
