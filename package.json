@@ -87,6 +87,7 @@
     "compile": "tsc -p ./",
     "watch": "node esbuild.js --watch",
     "build": "node esbuild.js --production",
+    "setup:fixtures": "npx tsx scripts/setup_fixtures.ts",
     "test": "vitest run"
   },
   "dependencies": {

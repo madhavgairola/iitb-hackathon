@@ -85,10 +85,13 @@ cd iitb-hackathon
 # Install dependencies
 npm install
 
+# Setup benchmark fixtures (Pallets Flask 3.1.3 at commit 22d92470)
+npm run setup:fixtures
+
 # Bundle extension
 npm run build
 
-# Run all 6 test suites (21 tests)
+# Run all test suites
 npm test
 ```
 
