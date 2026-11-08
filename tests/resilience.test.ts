@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as path from 'path';
 import { NodeWorkspaceProvider } from '../src/workspace/nodeProvider';
 import { DiffStagingManager } from '../src/diff/staging';
@@ -8,6 +8,11 @@ describe('Task C: Resilience, Fault Tolerance & Model Fallback', () => {
   const rootPath = path.resolve(__dirname, '..');
   const workspace = new NodeWorkspaceProvider(rootPath);
   const staging = new DiffStagingManager(workspace);
+
+  beforeEach(async () => {
+    await workspace.runCommand('git restore .', 'fixtures/flask');
+    await workspace.runCommand('git clean -fd', 'fixtures/flask');
+  });
 
   it('handles completely unreachable TrueForge endpoint gracefully without throwing uncaught errors', async () => {
     const unreachableClient = new TrueForgeHarnessClient({

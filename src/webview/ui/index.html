@@ -274,6 +274,25 @@
       color: #93c5fd;
     }
 
+    .inline-code.file-link {
+      cursor: pointer;
+      color: #60a5fa;
+      background: rgba(37, 99, 235, 0.12);
+      border-color: rgba(96, 165, 250, 0.35);
+      text-decoration: none;
+      transition: all 0.15s ease;
+      display: inline-inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .inline-code.file-link:hover {
+      background: rgba(37, 99, 235, 0.25);
+      border-color: #60a5fa;
+      color: #bfdbfe;
+      text-decoration: underline;
+    }
+
     .code-block-wrapper {
       margin: 10px 0;
       border-radius: 8px;
@@ -868,8 +887,14 @@
         </div>`;
       });
 
-      // Inline code
-      html = html.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
+      // Inline code and clickable file links
+      html = html.replace(/`([^`\n]+)`/g, (match, rawCode) => {
+        const trimmed = rawCode.trim();
+        if (isLikelyFilePath(trimmed)) {
+          return `<code class="inline-code file-link" onclick="openFileInEditor('${escapeHtml(trimmed)}')" title="Click to open ${escapeHtml(trimmed)}">📄 ${escapeHtml(trimmed)}</code>`;
+        }
+        return `<code class="inline-code" onclick="tryOpenFile('${escapeHtml(trimmed)}')">${escapeHtml(trimmed)}</code>`;
+      });
 
       // Headers
       html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
@@ -914,6 +939,31 @@
       navigator.clipboard.writeText(text);
       btn.style.color = '#4ade80';
       setTimeout(() => { btn.style.color = '#71717a'; }, 1500);
+    }
+
+    function isLikelyFilePath(str) {
+      if (!str || str.length > 150) return false;
+      const clean = str.trim();
+      if (/\.(py|ts|js|jsx|tsx|json|html|css|scss|md|rst|txt|toml|yaml|yml|cfg|ini|sh|bat|ps1|c|cpp|h|java|go|rs)$/i.test(clean)) {
+        return true;
+      }
+      if (clean.includes('/') || clean.includes('\\')) {
+        return true;
+      }
+      if (cachedFiles && cachedFiles.some(f => f.endsWith(clean) || clean.endsWith(f))) {
+        return true;
+      }
+      return false;
+    }
+
+    function tryOpenFile(text) {
+      if (isLikelyFilePath(text)) {
+        openFileInEditor(text);
+      }
+    }
+
+    function openFileInEditor(file) {
+      vscode.postMessage({ type: 'openFile', file });
     }
 
     // Autocomplete System
@@ -1135,7 +1185,7 @@
             (edit) => `
           <div style="margin-bottom: 12px;">
             <div class="review-top-bar">
-              <span class="review-title">
+              <span class="review-title" style="cursor: pointer;" onclick="openFileInEditor('${escapeHtml(edit.file)}')" title="Click to open ${escapeHtml(edit.file)}">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 ${escapeHtml(edit.file)}
               </span>

@@ -27,6 +27,7 @@ export interface TimelineEntry {
 export type WebviewToExtensionMessage =
   | { type: 'sendMessage'; prompt: string; model?: string }
   | { type: 'cancelRun' }
+  | { type: 'openFile'; file: string }
   | { type: 'acceptHunk'; editId: string; hunkId: string }
   | { type: 'rejectHunk'; editId: string; hunkId: string }
   | { type: 'applyEdit'; editId: string; acceptAll?: boolean }

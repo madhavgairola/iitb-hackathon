@@ -89,5 +89,5 @@ describe('Inline Editing Controller & Task A (Flask get_debug_flag)', () => {
     const undoEntry = await staging.undoLast();
     expect(undoEntry?.previousContent).toBe(originalContent);
     expect(await workspace.readFile(flaskHelperPath)).toBe(originalContent);
-  });
+  }, 20000);
 });

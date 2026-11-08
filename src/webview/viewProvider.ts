@@ -99,6 +99,53 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
         break;
       }
 
+      case 'openFile': {
+        try {
+          const rootPath = this.workspace.getRootPath();
+          let filePath = msg.file.trim();
+          if (filePath.startsWith('@file:')) {
+            filePath = filePath.slice(6);
+          }
+          const fullPath = path.isAbsolute(filePath)
+            ? filePath
+            : path.join(rootPath, filePath);
+
+          if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+            const doc = await vscode.workspace.openTextDocument(fullPath);
+            await vscode.window.showTextDocument(doc, { preview: true });
+          } else {
+            // Check if there is an in-memory or staged file with this name
+            const staged = this.stagingManager
+              .getPendingEdits()
+              .find((e) => e.file === filePath || e.file.endsWith(filePath) || fullPath.endsWith(e.file));
+
+            if (staged) {
+              const doc = await vscode.workspace.openTextDocument({
+                content: staged.proposedContent,
+                language: path.extname(staged.file).replace('.', '') || 'python',
+              });
+              await vscode.window.showTextDocument(doc, { preview: true });
+            } else {
+              // Try finding file in workspace if only basename was given
+              const foundFiles = await this.workspace.listFiles('');
+              const matched = foundFiles.find(
+                (f) => f === filePath || f.endsWith(`/${filePath}`) || f.endsWith(`\\${filePath}`)
+              );
+              if (matched) {
+                const targetPath = path.join(rootPath, matched);
+                const doc = await vscode.workspace.openTextDocument(targetPath);
+                await vscode.window.showTextDocument(doc, { preview: true });
+              } else {
+                vscode.window.showWarningMessage(`File not found: ${filePath}`);
+              }
+            }
+          }
+        } catch (err: any) {
+          vscode.window.showErrorMessage(`Unable to open file: ${err.message}`);
+        }
+        break;
+      }
+
       case 'cancelRun': {
         await this.harnessClient.cancelActiveSession();
         this.postMessage({
