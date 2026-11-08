@@ -6,6 +6,7 @@ import { DiffStagingManager } from '../src/diff/staging';
 import { HunkManager } from '../src/diff/hunks';
 import { LocalMcpServer } from '../src/mcp/server';
 import { ToolDispatcher } from '../src/mcp/tools';
+import { extractFilesFromMarkdownText } from '../src/diff/markdownExtractor';
 
 describe('MCP Server, Tools and Diff Safety Engine', () => {
   const rootPath = path.resolve(__dirname, '..');
@@ -137,6 +138,33 @@ describe('MCP Server, Tools and Diff Safety Engine', () => {
       expect(health.tools).toContain('read_file');
       expect(health.tools).toContain('propose_edit');
       expect(health.tools).toContain('run_terminal');
+    });
+
+    it('extracts files from markdown code blocks if model replies conversationally', () => {
+      const md = `
+### HTML (index.html)
+\`\`\`html
+<!DOCTYPE html>
+<html><body>Food</body></html>
+\`\`\`
+
+### CSS (styles.css)
+\`\`\`css
+body { margin: 0; }
+\`\`\`
+
+### JavaScript (app.js)
+\`\`\`javascript
+console.log("running");
+\`\`\`
+      `;
+
+      const files = extractFilesFromMarkdownText(md);
+      expect(files.length).toBe(3);
+      expect(files[0].path).toBe('index.html');
+      expect(files[0].content).toContain('<!DOCTYPE html>');
+      expect(files[1].path).toBe('styles.css');
+      expect(files[2].path).toBe('app.js');
     });
   });
 });
