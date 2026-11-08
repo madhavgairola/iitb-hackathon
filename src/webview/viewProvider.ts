@@ -78,6 +78,22 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
         break;
       }
 
+      case 'getWorkspaceFiles': {
+        try {
+          const files = await this.workspace.listFiles('');
+          this.postMessage({
+            type: 'workspaceFiles',
+            files,
+          });
+        } catch {
+          this.postMessage({
+            type: 'workspaceFiles',
+            files: [],
+          });
+        }
+        break;
+      }
+
       case 'sendMessage': {
         await this.handleUserTurn(msg.prompt, msg.model);
         break;

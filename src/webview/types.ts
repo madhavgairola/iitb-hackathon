@@ -32,11 +32,13 @@ export type WebviewToExtensionMessage =
   | { type: 'applyEdit'; editId: string; acceptAll?: boolean }
   | { type: 'rejectEdit'; editId: string }
   | { type: 'undoEdit' }
-  | { type: 'checkHealth' };
+  | { type: 'checkHealth' }
+  | { type: 'getWorkspaceFiles' };
 
 // Messages sent from Extension Host to Webview
 export type ExtensionToWebviewMessage =
   | { type: 'healthStatus'; online: boolean; message: string }
+  | { type: 'workspaceFiles'; files: string[] }
   | { type: 'streamDelta'; text: string }
   | { type: 'timelineEvent'; entry: TimelineEntry }
   | { type: 'turnDone'; success: boolean; error?: string; usedFallback?: boolean }

@@ -335,6 +335,36 @@
     .badge-accepted { color: #4ade80; font-size: 10px; }
     .badge-rejected { color: #f87171; font-size: 10px; }
     .badge-pending { color: #fbbf24; font-size: 10px; }
+
+    /* Autocomplete Popup */
+    .input-section { position: relative; }
+    .autocomplete-popup {
+      position: absolute;
+      bottom: 135px;
+      left: 10px;
+      right: 10px;
+      max-height: 180px;
+      overflow-y: auto;
+      background: #252526;
+      border: 1px solid #3c3c3c;
+      border-radius: 4px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+      z-index: 999;
+    }
+    .autocomplete-item {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      color: #ccc;
+      border-bottom: 1px solid #2e2e2e;
+    }
+    .autocomplete-item:hover, .autocomplete-item.active {
+      background: var(--accent);
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -357,16 +387,17 @@
     <div id="workspaceTab" class="tab-view active">
       <div id="streamContainer" class="stream-container"></div>
       <div class="input-section">
+        <div id="autocompletePopup" class="autocomplete-popup" style="display: none;"></div>
         <div class="pills-row">
-          <button class="pill-btn" onclick="insertPill('@file:')">+ @file</button>
-          <button class="pill-btn" onclick="insertPill('@symbol:')">+ @symbol</button>
+          <button class="pill-btn" id="filePillBtn">+ @file</button>
+          <button class="pill-btn" id="symbolPillBtn">+ @symbol</button>
           <button class="pill-btn" onclick="setPreset('taskA')">Preset: Task A</button>
           <button class="pill-btn" onclick="setPreset('taskB')">Preset: Task B</button>
         </div>
         <textarea
           id="promptInput"
           class="prompt-box"
-          placeholder="Ask TrueForge agent or use @file and @symbol mentions..."
+          placeholder="Ask TrueForge agent or type @ to mention files/symbols..."
         ></textarea>
         <div class="meta-row">
           <span id="promptTokenCount">Estimated: 0 tokens</span>
@@ -436,6 +467,16 @@
     const contextList = document.getElementById('contextList');
     const reviewList = document.getElementById('reviewList');
     const editCount = document.getElementById('editCount');
+    const autocompletePopup = document.getElementById('autocompletePopup');
+    const filePillBtn = document.getElementById('filePillBtn');
+    const symbolPillBtn = document.getElementById('symbolPillBtn');
+
+    let cachedFiles = [];
+    let currentSuggestions = [];
+    let selectedSuggestionIndex = -1;
+
+    // Request workspace files list on start
+    vscode.postMessage({ type: 'getWorkspaceFiles' });
 
     // Tab Navigation
     tabBtns.forEach((btn) => {
@@ -452,6 +493,243 @@
       const len = promptInput.value.length;
       const tokens = Math.ceil(len / 4);
       promptTokenCount.textContent = `Estimated: ~${tokens} tokens`;
+      checkAutocompleteTrigger();
+    });
+
+    // Autocomplete system
+    function checkAutocompleteTrigger() {
+      const cursor = promptInput.selectionStart;
+      const text = promptInput.value.slice(0, cursor);
+
+      // Match @file:<query>, @symbol:<query>, or @<query>
+      const match = text.match(/(?:^|\s)@([a-zA-Z0-9_\-\./]*)$/);
+      if (!match) {
+        hideAutocomplete();
+        return;
+      }
+
+      const raw = match[1];
+      if (raw.startsWith('file:')) {
+        const query = raw.slice(5).toLowerCase();
+        showFileSuggestions(query, match.index + (text[match.index] === ' ' ? 1 : 0), cursor);
+      } else if (raw.startsWith('symbol:')) {
+        const query = raw.slice(7).toLowerCase();
+        showSymbolSuggestions(query, match.index + (text[match.index] === ' ' ? 1 : 0), cursor);
+      } else {
+        // Typing @...
+        showGenericSuggestions(raw.toLowerCase(), match.index + (text[match.index] === ' ' ? 1 : 0), cursor);
+      }
+    }
+
+    function showFileSuggestions(query, replaceStart, replaceEnd) {
+      if (cachedFiles.length === 0) {
+        vscode.postMessage({ type: 'getWorkspaceFiles' });
+      }
+      const filtered = cachedFiles
+        .filter((f) => !query || f.toLowerCase().includes(query))
+        .slice(0, 20);
+
+      const items = filtered.map((f) => ({
+        label: `@file:${f}`,
+        display: f,
+        detail: 'file',
+        insertText: `@file:${f} `,
+        replaceStart,
+        replaceEnd,
+      }));
+
+      renderAutocomplete(items);
+    }
+
+    const COMMON_SYMBOLS = [
+      'get_debug_flag',
+      'get_load_dotenv',
+      'show_server_banner',
+      'config_command',
+      'Flask',
+      'Blueprint',
+      'Request',
+      'Response',
+      'create_app',
+    ];
+
+    function showSymbolSuggestions(query, replaceStart, replaceEnd) {
+      const filtered = COMMON_SYMBOLS
+        .filter((s) => !query || s.toLowerCase().includes(query));
+
+      const items = filtered.map((s) => ({
+        label: `@symbol:${s}`,
+        display: s,
+        detail: 'symbol',
+        insertText: `@symbol:${s} `,
+        replaceStart,
+        replaceEnd,
+      }));
+
+      renderAutocomplete(items);
+    }
+
+    function showGenericSuggestions(query, replaceStart, replaceEnd) {
+      const suggestions = [];
+
+      // File matches
+      const matchedFiles = cachedFiles
+        .filter((f) => !query || f.toLowerCase().includes(query))
+        .slice(0, 15);
+
+      for (const f of matchedFiles) {
+        suggestions.push({
+          label: `@file:${f}`,
+          display: f,
+          detail: 'file',
+          insertText: `@file:${f} `,
+          replaceStart,
+          replaceEnd,
+        });
+      }
+
+      // Symbol matches
+      const matchedSymbols = COMMON_SYMBOLS
+        .filter((s) => !query || s.toLowerCase().includes(query))
+        .slice(0, 5);
+
+      for (const s of matchedSymbols) {
+        suggestions.push({
+          label: `@symbol:${s}`,
+          display: s,
+          detail: 'symbol',
+          insertText: `@symbol:${s} `,
+          replaceStart,
+          replaceEnd,
+        });
+      }
+
+      renderAutocomplete(suggestions);
+    }
+
+    function renderAutocomplete(items) {
+      currentSuggestions = items;
+      selectedSuggestionIndex = items.length > 0 ? 0 : -1;
+
+      if (items.length === 0) {
+        hideAutocomplete();
+        return;
+      }
+
+      autocompletePopup.innerHTML = items
+        .map(
+          (item, idx) => `
+        <div class="autocomplete-item ${idx === 0 ? 'active' : ''}" data-idx="${idx}">
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.display)}</span>
+          <span style="color: #666; font-size: 10px; margin-left: 8px;">${item.detail}</span>
+        </div>
+      `
+        )
+        .join('');
+
+      autocompletePopup.style.display = 'block';
+
+      // Click listener
+      autocompletePopup.querySelectorAll('.autocomplete-item').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(el.dataset.idx, 10);
+          selectSuggestion(idx);
+        });
+      });
+    }
+
+    function hideAutocomplete() {
+      autocompletePopup.style.display = 'none';
+      currentSuggestions = [];
+      selectedSuggestionIndex = -1;
+    }
+
+    function selectSuggestion(idx) {
+      const item = currentSuggestions[idx];
+      if (!item) return;
+
+      const before = promptInput.value.slice(0, item.replaceStart);
+      const after = promptInput.value.slice(item.replaceEnd);
+      promptInput.value = before + item.insertText + after;
+
+      const newCursor = item.replaceStart + item.insertText.length;
+      promptInput.setSelectionRange(newCursor, newCursor);
+      promptInput.focus();
+      promptInput.dispatchEvent(new Event('input'));
+      hideAutocomplete();
+    }
+
+    // Keyboard navigation inside promptInput for autocomplete
+    promptInput.addEventListener('keydown', (e) => {
+      if (autocompletePopup.style.display === 'block' && currentSuggestions.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
+          updateActiveSuggestion();
+          return;
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectedSuggestionIndex =
+            (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
+          updateActiveSuggestion();
+          return;
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+          if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < currentSuggestions.length) {
+            e.preventDefault();
+            selectSuggestion(selectedSuggestionIndex);
+            return;
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          hideAutocomplete();
+          return;
+        }
+      }
+    });
+
+    function updateActiveSuggestion() {
+      const items = autocompletePopup.querySelectorAll('.autocomplete-item');
+      items.forEach((item, idx) => {
+        if (idx === selectedSuggestionIndex) {
+          item.classList.add('active');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    // Close popup on outside click
+    document.addEventListener('click', (e) => {
+      if (!autocompletePopup.contains(e.target) && e.target !== promptInput) {
+        hideAutocomplete();
+      }
+    });
+
+    // Pill buttons
+    filePillBtn.addEventListener('click', () => {
+      const cursor = promptInput.selectionStart;
+      const val = promptInput.value;
+      const insert = (val && !val.endsWith(' ') ? ' ' : '') + '@file:';
+      promptInput.value = val.slice(0, cursor) + insert + val.slice(cursor);
+      promptInput.focus();
+      const newPos = cursor + insert.length;
+      promptInput.setSelectionRange(newPos, newPos);
+      promptInput.dispatchEvent(new Event('input'));
+      showFileSuggestions('', newPos - 6, newPos);
+    });
+
+    symbolPillBtn.addEventListener('click', () => {
+      const cursor = promptInput.selectionStart;
+      const val = promptInput.value;
+      const insert = (val && !val.endsWith(' ') ? ' ' : '') + '@symbol:';
+      promptInput.value = val.slice(0, cursor) + insert + val.slice(cursor);
+      promptInput.focus();
+      const newPos = cursor + insert.length;
+      promptInput.setSelectionRange(newPos, newPos);
+      promptInput.dispatchEvent(new Event('input'));
+      showSymbolSuggestions('', newPos - 8, newPos);
     });
 
     function insertPill(text) {
@@ -491,6 +769,10 @@
     window.addEventListener('message', (event) => {
       const msg = event.data;
       switch (msg.type) {
+        case 'workspaceFiles':
+          cachedFiles = msg.files || [];
+          break;
+
         case 'healthStatus':
           if (msg.online) {
             statusBadge.className = 'status-badge online';
