@@ -359,26 +359,75 @@
     /* Inline Staged Diff Review Component */
     .staged-review-card {
       margin-top: 10px;
-      border: 1px solid rgba(37, 99, 235, 0.3);
-      background: #161619;
-      border-radius: 8px;
-      padding: 12px;
+      border: 1px solid #27272a;
+      background: #18181b;
+      border-radius: 10px;
+      padding: 10px 12px;
+      transition: all 0.2s ease;
     }
 
     .review-top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    .review-left-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
     }
 
     .review-title {
-      font-size: 12px;
+      font-size: 12.5px;
       font-weight: 600;
       color: #60a5fa;
       display: flex;
       align-items: center;
       gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+    .review-title:hover {
+      text-decoration: underline;
+      color: #93c5fd;
+    }
+
+    .diff-toggle-pill {
+      font-size: 10.5px;
+      color: #a1a1aa;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 2px 7px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      user-select: none;
+      transition: all 0.15s;
+    }
+    .diff-toggle-pill:hover, .diff-toggle-pill.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .hunks-drawer {
+      margin-top: 10px;
+      border-top: 1px solid #27272a;
+      padding-top: 8px;
+      animation: fadeIn 0.15s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .hunk-box {
@@ -1182,44 +1231,78 @@
 
         reviewCard.innerHTML = edits
           .map(
-            (edit) => `
-          <div style="margin-bottom: 12px;">
+            (edit) => {
+              let added = 0;
+              let deleted = 0;
+              for (const h of edit.hunks) {
+                for (const l of h.lines) {
+                  if (l.startsWith('+')) added++;
+                  if (l.startsWith('-')) deleted++;
+                }
+              }
+              const statsText = `+${added} -${deleted}`;
+
+              return `
+          <div style="margin-bottom: 8px;">
             <div class="review-top-bar">
-              <span class="review-title" style="cursor: pointer;" onclick="openFileInEditor('${escapeHtml(edit.file)}')" title="Click to open ${escapeHtml(edit.file)}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                ${escapeHtml(edit.file)}
-              </span>
-              <div style="display: flex; gap: 4px;">
+              <div class="review-left-group">
+                <span class="review-title" onclick="openFileInEditor('${escapeHtml(edit.file)}')" title="Click to open ${escapeHtml(edit.file)} in editor">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  ${escapeHtml(edit.file)}
+                </span>
+                <span class="diff-toggle-pill" id="toggle-btn-${edit.id}" onclick="toggleHunks('${edit.id}')" title="Click to view/hide diff changes">
+                  <span>${statsText}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+              </div>
+              <div style="display: flex; gap: 6px; flex-shrink: 0;">
                 <button class="diff-btn diff-btn-primary" onclick="applyEdit('${edit.id}', true)">Accept All</button>
                 <button class="diff-btn diff-btn-danger" onclick="rejectEdit('${edit.id}')">Reject</button>
               </div>
             </div>
-            ${edit.hunks
-              .map(
-                (h) => `
-              <div class="hunk-box">
-                <div style="color: #71717a; margin-bottom: 4px; font-size: 10px;">
-                  Hunk @@ -${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines} @@
-                  <span style="float: right; color: ${h.status === 'accepted' ? '#4ade80' : h.status === 'rejected' ? '#f87171' : '#fbbf24'};">${h.status}</span>
+
+            <div id="hunks-${edit.id}" class="hunks-drawer" style="display: none;">
+              ${edit.hunks
+                .map(
+                  (h) => `
+                <div class="hunk-box">
+                  <div style="color: #71717a; margin-bottom: 4px; font-size: 10px;">
+                    Hunk @@ -${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines} @@
+                    <span style="float: right; color: ${h.status === 'accepted' ? '#4ade80' : h.status === 'rejected' ? '#f87171' : '#fbbf24'};">${h.status}</span>
+                  </div>
+                  ${h.lines
+                    .map((l) => {
+                      const cls = l.startsWith('+') ? 'diff-line-add' : l.startsWith('-') ? 'diff-line-del' : 'diff-line-ctx';
+                      return `<div class="${cls}">${escapeHtml(l)}</div>`;
+                    })
+                    .join('')}
+                  <div class="diff-actions">
+                    <button class="diff-btn diff-btn-primary" style="padding: 2px 6px; font-size: 10px;" onclick="acceptHunk('${edit.id}', '${h.id}')">Accept Hunk</button>
+                    <button class="diff-btn diff-btn-danger" style="padding: 2px 6px; font-size: 10px;" onclick="rejectHunk('${edit.id}', '${h.id}')">Reject Hunk</button>
+                  </div>
                 </div>
-                ${h.lines
-                  .map((l) => {
-                    const cls = l.startsWith('+') ? 'diff-line-add' : l.startsWith('-') ? 'diff-line-del' : 'diff-line-ctx';
-                    return `<div class="${cls}">${escapeHtml(l)}</div>`;
-                  })
-                  .join('')}
-                <div class="diff-actions">
-                  <button class="diff-btn diff-btn-primary" style="padding: 2px 6px; font-size: 10px;" onclick="acceptHunk('${edit.id}', '${h.id}')">Accept Hunk</button>
-                  <button class="diff-btn diff-btn-danger" style="padding: 2px 6px; font-size: 10px;" onclick="rejectHunk('${edit.id}', '${h.id}')">Reject Hunk</button>
-                </div>
-              </div>
-            `
-              )
-              .join('')}
+              `
+                )
+                .join('')}
+            </div>
           </div>
-        `
+        `;
+            }
           )
           .join('');
+      }
+    }
+
+    function toggleHunks(editId) {
+      const drawer = document.getElementById(`hunks-${editId}`);
+      const btn = document.getElementById(`toggle-btn-${editId}`);
+      if (!drawer) return;
+      if (drawer.style.display === 'none') {
+        drawer.style.display = 'block';
+        if (btn) btn.classList.add('active');
+      } else {
+        drawer.style.display = 'none';
+        if (btn) btn.classList.remove('active');
       }
     }
 
