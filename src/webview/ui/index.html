@@ -861,8 +861,6 @@
         <div class="pills-container">
           <button class="pill-chip" id="filePillBtn">+ @file</button>
           <button class="pill-chip" id="symbolPillBtn">+ @symbol</button>
-          <button class="pill-chip" onclick="setPreset('taskA')">Preset A</button>
-          <button class="pill-chip" onclick="setPreset('taskB')">Preset B</button>
         </div>
         <div class="action-buttons">
           <span id="tokenEstimate" class="token-indicator">0 tok</span>
@@ -1022,16 +1020,6 @@
       promptInput.value = '';
       promptInput.style.height = 'auto';
     });
-
-    function setPreset(type) {
-      if (type === 'taskA') {
-        promptInput.value = "@file:src/flask/helpers.py Treat the values 'off' and 'n' as false as well, case-insensitively, and update the docstring to list every value that is treated as false.";
-      } else if (type === 'taskB') {
-        promptInput.value = "Add a new built-in CLI command flask config that prints the loaded application's configuration as JSON, masking the values of any key containing SECRET, PASSWORD, TOKEN or KEY as '***'. It must appear in flask --help, be covered by a test, and be documented alongside the other built-in commands.";
-      }
-      promptInput.dispatchEvent(new Event('input'));
-      promptInput.focus();
-    }
 
     function submitPrompt() {
       const text = promptInput.value.trim();
