@@ -73,16 +73,16 @@ describe('Inline Editing Controller & Task A (Flask get_debug_flag)', () => {
     const updatedOnDisk = await workspace.readFile(flaskHelperPath);
     expect(updatedOnDisk).toContain('{"0", "false", "no", "off", "n"}');
 
-    // 3. Run Task A verification command with python if installed
-    const cmdResult = await workspace.runCommand(
-      'python -c "import os; os.environ[\'FLASK_DEBUG\'] = \'off\'; from flask.helpers import get_debug_flag; print(get_debug_flag())"',
-      'fixtures/flask/src'
-    );
+    // 3. Run Task A verification commands with python for all required values
+    for (const val of ['off', 'OFF', 'n', 'N']) {
+      const cmdResult = await workspace.runCommand(
+        `python -c "import os; os.environ['FLASK_DEBUG'] = '${val}'; from flask.helpers import get_debug_flag; print(get_debug_flag())"`,
+        'fixtures/flask/src'
+      );
 
-    if (cmdResult.exitCode === 0) {
-      expect(cmdResult.stdout.trim()).toBe('False');
-    } else {
-      console.log('Python not installed in environment, verifying code transformation via AST / string check: passed');
+      if (cmdResult.exitCode === 0) {
+        expect(cmdResult.stdout.trim()).toBe('False');
+      }
     }
 
     // 4. Undo edit to restore clean git state

@@ -70,7 +70,17 @@ describe('Task B: Autonomous Multi-File Discovery & Execution', () => {
     expect(await workspace.readFile(testPath)).toContain('def test_config_command');
     expect(await workspace.readFile(docPath)).toContain('Show Configuration');
 
-    // Run verification command (e.g. testing masking logic with python)
+    // Run verification command: verify flask --help contains the new command
+    const helpExec = await workspace.runCommand(
+      'python -m flask --help',
+      'fixtures/flask/src'
+    );
+    if (helpExec.exitCode === 0) {
+      expect(helpExec.stdout).toContain('config');
+      expect(helpExec.stdout).toContain('Show loaded application configuration');
+    }
+
+    // Verify masking logic in python
     const testExec = await workspace.runCommand(
       'python -c "import json; masked = {\'SECRET_KEY\': \'***\'}; assert masked[\'SECRET_KEY\'] == \'***\'; print(\'MASK_VERIFIED\')"',
       'fixtures/flask'
