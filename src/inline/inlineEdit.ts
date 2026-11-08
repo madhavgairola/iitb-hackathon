@@ -117,8 +117,8 @@ export class InlineEditController {
           agentName,
           prompt,
           async (event: any) => {
-            if (event.type === 'model_message_delta') {
-              streamedText += event.delta?.content || '';
+            if (event.type === 'model.message.delta' || event.type === 'model_message_delta') {
+              streamedText += event.content ?? event.delta?.content ?? '';
             }
           }
         );
