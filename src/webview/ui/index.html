@@ -800,14 +800,49 @@
       vscode.postMessage({ type: 'sendMessage', prompt: text });
     }
 
+    function formatRelativeTime(timestamp) {
+      if (!timestamp) return 'Just now';
+      const now = Date.now();
+      const diffSecs = Math.max(0, Math.floor((now - timestamp) / 1000));
+
+      if (diffSecs < 45) {
+        return 'Just now';
+      } else if (diffSecs < 90) {
+        return '1m ago';
+      } else if (diffSecs < 3600) {
+        return `${Math.floor(diffSecs / 60)}m ago`;
+      } else if (diffSecs < 7200) {
+        return '1h ago';
+      } else if (diffSecs < 86400) {
+        return `${Math.floor(diffSecs / 3600)}h ago`;
+      } else {
+        return `${Math.floor(diffSecs / 86400)}d ago`;
+      }
+    }
+
+    function updateAllRelativeTimes() {
+      const elements = document.querySelectorAll('.rel-time');
+      elements.forEach((el) => {
+        const ts = parseInt(el.dataset.timestamp, 10);
+        if (ts) {
+          el.textContent = formatRelativeTime(ts);
+        }
+      });
+    }
+
+    // Refresh relative timestamps every 15 seconds
+    setInterval(updateAllRelativeTimes, 15000);
+
     function appendUserMessage(text) {
       const row = document.createElement('div');
       row.className = 'message-row user';
-      const timeStr = 'Just now';
+      const now = Date.now();
+      const timeStr = formatRelativeTime(now);
+      const clockTime = new Date(now).toLocaleTimeString();
       row.innerHTML = `
         <div class="user-bubble">${escapeHtml(text)}</div>
         <div class="user-meta">
-          <span>${timeStr}</span>
+          <span class="rel-time" data-timestamp="${now}" title="${clockTime}">${timeStr}</span>
           <button class="icon-btn" title="Copy prompt" onclick="navigator.clipboard.writeText(${JSON.stringify(text)})">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
@@ -891,11 +926,15 @@
       }
 
       if (currentAssistantRow) {
+        const finishTime = Date.now();
+        const timeStr = formatRelativeTime(finishTime);
+        const clockTime = new Date(finishTime).toLocaleTimeString();
+
         // Append bottom footer
         const footer = document.createElement('div');
         footer.className = 'assistant-footer';
         footer.innerHTML = `
-          <span>Just now</span>
+          <span class="rel-time" data-timestamp="${finishTime}" title="${clockTime}">${timeStr}</span>
           <button class="icon-btn" title="Copy response" onclick="copyResponse(this)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
