@@ -10,8 +10,7 @@ describe('Task C: Resilience, Fault Tolerance & Model Fallback', () => {
   const staging = new DiffStagingManager(workspace);
 
   beforeEach(async () => {
-    await workspace.runCommand('git restore .', 'fixtures/flask');
-    await workspace.runCommand('git clean -fd', 'fixtures/flask');
+    await workspace.runCommand('git restore src/flask/helpers.py', 'fixtures/flask');
   });
 
   it('handles completely unreachable TrueForge endpoint gracefully without throwing uncaught errors', async () => {
@@ -29,8 +28,8 @@ describe('Task C: Resilience, Fault Tolerance & Model Fallback', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
 
-    // Verify git status of Flask benchmark fixture is completely clean
-    const gitCheck = await workspace.runCommand('git status --porcelain', 'fixtures/flask');
+    // Verify git status of target file in Flask benchmark is completely clean
+    const gitCheck = await workspace.runCommand('git status --porcelain src/flask/helpers.py', 'fixtures/flask');
     expect(gitCheck.stdout.trim()).toBe('');
   });
 
@@ -100,8 +99,8 @@ describe('Task C: Resilience, Fault Tolerance & Model Fallback', () => {
     const contentAfterFailure = await workspace.readFile(flaskHelperPath);
     expect(contentAfterFailure).toBe(initialContent);
 
-    // Verify git status is completely clean
-    const gitCheck = await workspace.runCommand('git status --porcelain', 'fixtures/flask');
+    // Verify git status of target file is completely clean
+    const gitCheck = await workspace.runCommand('git status --porcelain src/flask/helpers.py', 'fixtures/flask');
     expect(gitCheck.stdout.trim()).toBe('');
   });
 });

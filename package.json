@@ -70,11 +70,6 @@
           "type": "string",
           "default": "gemini/gemini-2.5-pro",
           "description": "Configurable secondary / fallback model for resilience (Task C)."
-        },
-        "trueforge.autoApplyEdits": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically apply proposed code edits directly to the workspace filesystem without waiting for manual Diff Review acceptance."
         }
       }
     },

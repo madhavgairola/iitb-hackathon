@@ -98,9 +98,8 @@ def test_config_command(runner):
     throw new Error('FAIL: config not found in flask --help!');
   }
 
-  // 3. Restore pristine state
-  await ws.runCommand('git restore .');
-  await ws.runCommand('git clean -fd');
+  // 3. Restore pristine state of Task B files
+  await ws.runCommand('git restore src/flask/cli.py tests/test_cli.py docs/cli.rst');
   console.log('PASS: Pytest and flask --help verified 100%!');
 }
 

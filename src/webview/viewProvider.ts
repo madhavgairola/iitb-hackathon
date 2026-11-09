@@ -19,7 +19,6 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
   private stagingManager: DiffStagingManager;
   private contextAssembler: ContextAssembler;
   private workspace: WorkspaceProvider;
-  private autoApplyEdits: boolean = false;
 
   constructor(
     extensionUri: vscode.Uri,
@@ -32,9 +31,6 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
     this.stagingManager = stagingManager;
     this.workspace = workspace;
     this.contextAssembler = new ContextAssembler(workspace);
-    this.autoApplyEdits = vscode.workspace
-      .getConfiguration('trueforge')
-      .get<boolean>('autoApplyEdits', false);
   }
 
   public resolveWebviewView(
@@ -49,12 +45,6 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
     };
 
     webviewView.webview.html = this.getHtmlContent();
-
-    // Send initial Auto-Save state
-    this.postMessage({
-      type: 'autoSaveState',
-      enabled: this.autoApplyEdits,
-    });
 
     webviewView.webview.onDidReceiveMessage(async (message: WebviewToExtensionMessage) => {
       await this.handleMessage(message);
@@ -85,35 +75,6 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
           online: health.online,
           message: health.message,
         });
-        break;
-      }
-
-      case 'getAutoSaveState': {
-        this.postMessage({
-          type: 'autoSaveState',
-          enabled: this.autoApplyEdits,
-        });
-        break;
-      }
-
-      case 'toggleAutoSave': {
-        this.autoApplyEdits = !this.autoApplyEdits;
-        try {
-          await vscode.workspace
-            .getConfiguration('trueforge')
-            .update('autoApplyEdits', this.autoApplyEdits, vscode.ConfigurationTarget.Global);
-        } catch {
-          // Ignore configuration write issues
-        }
-        this.postMessage({
-          type: 'autoSaveState',
-          enabled: this.autoApplyEdits,
-        });
-        vscode.window.showInformationMessage(
-          this.autoApplyEdits
-            ? '⚡ Auto-Save Enabled: Files and edits are written directly and permanently to workspace.'
-            : '🛡️ Diff Review Enabled: Edits are staged for review (Zero Silent Writes).'
-        );
         break;
       }
 
@@ -418,26 +379,6 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
             kind: 'tool_result',
             title: `Auto-Staged ${extractedFiles.length} File(s) to Diff Review Buffer`,
             details: extractedFiles.map((f) => f.path).join(', '),
-          },
-        });
-      }
-    }
-
-    // Auto-Save: If enabled, automatically commit pending edits permanently to workspace disk
-    if (this.autoApplyEdits) {
-      const pendingToApply = this.stagingManager.getPendingEdits();
-      for (const edit of pendingToApply) {
-        await this.stagingManager.applyEdit(edit.id, true);
-      }
-      if (pendingToApply.length > 0) {
-        this.postMessage({
-          type: 'timelineEvent',
-          entry: {
-            id: 'auto-save-' + Date.now(),
-            timestamp: Date.now(),
-            kind: 'done',
-            title: `Auto-Save: Permanently saved ${pendingToApply.length} file(s) to workspace`,
-            details: pendingToApply.map((e) => e.file).join(', '),
           },
         });
       }
