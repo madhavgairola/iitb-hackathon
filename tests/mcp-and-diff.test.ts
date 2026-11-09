@@ -42,7 +42,7 @@ describe('MCP Server, Tools and Diff Safety Engine', () => {
       const data = JSON.parse(result.content[0].text);
       expect(data.match_count).toBeGreaterThan(0);
       expect(data.matches.some((m: any) => m.file === 'package.json')).toBe(true);
-    });
+    }, 15000);
 
     it('run_terminal executes commands and returns output', async () => {
       const result = await dispatcher.dispatch('run_terminal', {

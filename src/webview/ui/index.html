@@ -785,6 +785,10 @@
     </div>
     <div class="header-actions">
       <span id="pendingBadge" class="badge-edits" style="display: none;">0 changes</span>
+      <button id="autoSaveBtn" class="header-btn" title="Toggle Auto-Save directly to disk (vs Diff Review)">
+        <span id="autoSaveIcon">🛡️</span>
+        <span id="autoSaveText">Review</span>
+      </button>
       <button id="undoBtn" class="header-btn" title="Undo last applied edit">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
         Undo
@@ -907,6 +911,31 @@
     const sendBtn = document.getElementById('sendBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const undoBtn = document.getElementById('undoBtn');
+    const autoSaveBtn = document.getElementById('autoSaveBtn');
+    const autoSaveIcon = document.getElementById('autoSaveIcon');
+    const autoSaveText = document.getElementById('autoSaveText');
+    let isAutoSave = false;
+
+    function updateAutoSaveUI(enabled) {
+      isAutoSave = !!enabled;
+      if (isAutoSave) {
+        autoSaveIcon.textContent = '⚡';
+        autoSaveText.textContent = 'Direct Save';
+        autoSaveBtn.style.color = '#10b981';
+        autoSaveBtn.title = 'Auto-Save is ON: Files and changes are saved directly and permanently to workspace disk. Click to switch to Review Mode.';
+      } else {
+        autoSaveIcon.textContent = '🛡️';
+        autoSaveText.textContent = 'Review';
+        autoSaveBtn.style.color = '#a1a1aa';
+        autoSaveBtn.title = 'Diff Review is ON: Edits are staged for review (Zero Silent Writes). Click to switch to Direct Save.';
+      }
+    }
+
+    if (autoSaveBtn) {
+      autoSaveBtn.addEventListener('click', () => {
+        vscode.postMessage({ type: 'toggleAutoSave' });
+      });
+    }
     const newChatBtn = document.getElementById('newChatBtn');
     const pendingBadge = document.getElementById('pendingBadge');
     const autocompletePopup = document.getElementById('autocompletePopup');
@@ -1453,6 +1482,10 @@
           statusDot.title = msg.online ? 'TrueForge Online' : 'TrueForge Offline';
           break;
 
+        case 'autoSaveState':
+          updateAutoSaveUI(msg.enabled);
+          break;
+
         case 'workspaceFiles':
           cachedFiles = msg.files || [];
           break;
@@ -1718,6 +1751,7 @@
     }
     checkHealth();
     setInterval(checkHealth, 5000);
+    vscode.postMessage({ type: 'getAutoSaveState' });
   </script>
 </body>
 </html>

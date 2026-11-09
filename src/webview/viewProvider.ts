@@ -19,6 +19,7 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
   private stagingManager: DiffStagingManager;
   private contextAssembler: ContextAssembler;
   private workspace: WorkspaceProvider;
+  private autoApplyEdits: boolean = false;
 
   constructor(
     extensionUri: vscode.Uri,
@@ -31,6 +32,9 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
     this.stagingManager = stagingManager;
     this.workspace = workspace;
     this.contextAssembler = new ContextAssembler(workspace);
+    this.autoApplyEdits = vscode.workspace
+      .getConfiguration('trueforge')
+      .get<boolean>('autoApplyEdits', false);
   }
 
   public resolveWebviewView(
@@ -45,6 +49,12 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
     };
 
     webviewView.webview.html = this.getHtmlContent();
+
+    // Send initial Auto-Save state
+    this.postMessage({
+      type: 'autoSaveState',
+      enabled: this.autoApplyEdits,
+    });
 
     webviewView.webview.onDidReceiveMessage(async (message: WebviewToExtensionMessage) => {
       await this.handleMessage(message);
@@ -75,6 +85,35 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
           online: health.online,
           message: health.message,
         });
+        break;
+      }
+
+      case 'getAutoSaveState': {
+        this.postMessage({
+          type: 'autoSaveState',
+          enabled: this.autoApplyEdits,
+        });
+        break;
+      }
+
+      case 'toggleAutoSave': {
+        this.autoApplyEdits = !this.autoApplyEdits;
+        try {
+          await vscode.workspace
+            .getConfiguration('trueforge')
+            .update('autoApplyEdits', this.autoApplyEdits, vscode.ConfigurationTarget.Global);
+        } catch {
+          // Ignore configuration write issues
+        }
+        this.postMessage({
+          type: 'autoSaveState',
+          enabled: this.autoApplyEdits,
+        });
+        vscode.window.showInformationMessage(
+          this.autoApplyEdits
+            ? '⚡ Auto-Save Enabled: Files and edits are written directly and permanently to workspace.'
+            : '🛡️ Diff Review Enabled: Edits are staged for review (Zero Silent Writes).'
+        );
         break;
       }
 
@@ -240,13 +279,18 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
 
     // 2. Prepare System Prompt & Agent
     const systemInstructions =
-      'You are an autonomous senior AI software engineering agent pair programming in VS Code. ' +
-      'CORE RULES OF BEHAVIOR:\n' +
-      '1. ALWAYS TAKE ACTION: When the user asks you to create, build, modify, or add files/code, you MUST use the `propose_edit` tool to stage the actual files into the workspace. Do NOT just print code in markdown or explain what to do.\n' +
-      '2. MULTI-FILE WORKFLOWS: When building projects, websites, or features that require multiple files (e.g. index.html, styles.css, app.js), call `propose_edit` for each file.\n' +
-      '3. EXPLORE BEFORE EDITING: Use `read_file`, `list_files`, `search_workspace`, and `find_symbol` to explore the repository.\n' +
-      '4. ZERO SILENT WRITES: All file modifications and creations MUST go through `propose_edit` so they can be inspected and approved in the Diff Review buffer.\n' +
-      '5. RUN TERMINAL: Use `run_terminal` to run tests or build commands when requested.';
+      'You are an elite, autonomous Staff AI Software Engineer pair programming inside VS Code.\n\n' +
+      'CORE RULES OF BEHAVIOR & EXCELLENCE:\n' +
+      '1. WRITE COMPLETE, PRODUCTION-GRADE CODE: Never output generic placeholders, stubs, simplistic templates, or comments like `# TODO: implement this` or `// add code here`. Write complete, robust, type-safe, and production-grade implementations with comprehensive error handling and edge cases covered.\n' +
+      '2. AUTONOMOUS DEPENDENCY & ENVIRONMENT MANAGEMENT: When introducing or using any external library, framework, or tool (e.g. npm packages, python packages, CLI utilities):\n' +
+      '   - Proactively check `package.json`, `requirements.txt`, or `pyproject.toml` using `read_file` or `search_workspace`.\n' +
+      '   - If a dependency is missing or not installed, AUTONOMOUSLY execute `run_terminal` to install it immediately (e.g., `npm install <pkg>` or `pip install <pkg>`).\n' +
+      '   - If any command fails with `ModuleNotFoundError`, `Cannot find module`, or missing package error, automatically install the missing package and re-verify.\n' +
+      '3. ALWAYS TAKE ACTION: When asked to build, modify, or create features or files, you MUST use the `propose_edit` tool to stage the actual files. Do NOT just print code in markdown or explain what to do.\n' +
+      '4. MULTI-FILE ARCHITECTURES: When building projects, applications, or features spanning multiple files, call `propose_edit` for each file with full, complete contents.\n' +
+      '5. DEEP EXPLORATION & ARCHITECTURAL CONSISTENCY: Explore existing project structure first using `read_file`, `list_files`, `search_workspace`, and `find_symbol`. Adapt to existing coding conventions, style, and frameworks rather than introducing conflicting generic patterns.\n' +
+      '6. SELF-VERIFICATION WITH RUN_TERMINAL: After creating or editing code, use `run_terminal` to run tests, build checks, or smoke tests to verify everything executes cleanly without errors.\n' +
+      '7. SAFE DIFF REVIEW: File edits go through `propose_edit` to generate verifiable diffs and undo history in the Diff Review buffer.';
 
     try {
       await this.harnessClient.ensureAgent(
@@ -374,6 +418,26 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
             kind: 'tool_result',
             title: `Auto-Staged ${extractedFiles.length} File(s) to Diff Review Buffer`,
             details: extractedFiles.map((f) => f.path).join(', '),
+          },
+        });
+      }
+    }
+
+    // Auto-Save: If enabled, automatically commit pending edits permanently to workspace disk
+    if (this.autoApplyEdits) {
+      const pendingToApply = this.stagingManager.getPendingEdits();
+      for (const edit of pendingToApply) {
+        await this.stagingManager.applyEdit(edit.id, true);
+      }
+      if (pendingToApply.length > 0) {
+        this.postMessage({
+          type: 'timelineEvent',
+          entry: {
+            id: 'auto-save-' + Date.now(),
+            timestamp: Date.now(),
+            kind: 'done',
+            title: `Auto-Save: Permanently saved ${pendingToApply.length} file(s) to workspace`,
+            details: pendingToApply.map((e) => e.file).join(', '),
           },
         });
       }

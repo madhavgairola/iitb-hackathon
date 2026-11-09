@@ -34,11 +34,14 @@ export type WebviewToExtensionMessage =
   | { type: 'rejectEdit'; editId: string }
   | { type: 'undoEdit' }
   | { type: 'checkHealth' }
-  | { type: 'getWorkspaceFiles' };
+  | { type: 'getWorkspaceFiles' }
+  | { type: 'toggleAutoSave' }
+  | { type: 'getAutoSaveState' };
 
 // Messages sent from Extension Host to Webview
 export type ExtensionToWebviewMessage =
   | { type: 'healthStatus'; online: boolean; message: string }
+  | { type: 'autoSaveState'; enabled: boolean }
   | { type: 'workspaceFiles'; files: string[] }
   | { type: 'streamDelta'; text: string }
   | { type: 'timelineEvent'; entry: TimelineEntry }
