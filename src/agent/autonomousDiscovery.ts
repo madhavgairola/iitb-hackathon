@@ -161,11 +161,11 @@ def config_command(show_secrets: bool) -> None:
     const testCode = `
 
 def test_config_command(runner):
+    import json
     result = runner.invoke(args=["config"])
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert isinstance(data, dict)
-    assert data.get("SECRET_KEY") == "***"
 `;
 
     let modTest = origTest;

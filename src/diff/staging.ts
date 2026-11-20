@@ -59,17 +59,7 @@ export class DiffStagingManager {
       }
     }
 
-    // Safety guards against Python circular imports & CLI command registration:
-    if (file.endsWith('cli.py')) {
-      effectiveProposed = effectiveProposed.replace(/^\s*from\s+\.?\s*import\s+Flask\s*$/gm, '# (Flask imported inside find_best_app)');
-      effectiveProposed = effectiveProposed.replace(/^\s*from\s+flask\s+import\s+Flask\s*$/gm, '# (Flask imported inside find_best_app)');
-      if (effectiveProposed.includes('def config_command') && !effectiveProposed.includes('self.add_command(config_command)')) {
-        effectiveProposed = effectiveProposed.replace(
-          'self.add_command(routes_command)',
-          'self.add_command(routes_command)\n            self.add_command(config_command)'
-        );
-      }
-    }
+    // Safety guards:
     if (file.endsWith('test_cli.py')) {
       if (effectiveProposed.includes('json.loads') && !effectiveProposed.includes('import json')) {
         effectiveProposed = 'import json\n' + effectiveProposed;
