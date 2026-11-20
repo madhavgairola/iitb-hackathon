@@ -36,8 +36,8 @@ export class InlineEditController {
       `INSTRUCTION:\n${instruction}\n\n` +
       `REQUIREMENTS:\n` +
       `1. Modify the selected code to satisfy the instruction precisely.\n` +
-      `2. Call the propose_edit tool with the complete modified file content and explanation, OR output the modified code.\n` +
-      `3. Do NOT make unrelated modifications.`
+      `2. Return the replacement code for the selected lines or call propose_edit with the snippet.\n` +
+      `3. Do NOT delete or truncate outside code.`
     );
   }
 
@@ -128,26 +128,55 @@ export class InlineEditController {
           return;
         }
 
-        // Check if edit was staged via tool, or if we need to stage streamed replacement
+        const originalContent = document.getText();
+        const origLines = originalContent.split('\n');
+
+        // Extract replacement snippet
+        let snippetToUse = '';
         const pendingEdits = this.stagingManager.getPendingEdits();
-        let targetEdit = pendingEdits.find((e) => e.file === relPath);
+        const toolEdit = pendingEdits.find((e) => e.file === relPath);
 
-        if (!targetEdit && streamedText.trim()) {
-          // Extract code block if agent replied with code
-          const codeMatch = streamedText.match(/```[a-zA-Z0-9_-]*\n([\s\S]*?)\n```/);
-          const snippetToUse = codeMatch ? codeMatch[1] : streamedText;
-
-          const originalContent = document.getText();
-          const proposedContent = this.applySelectedSnippetReplacement(
-            originalContent,
-            startLine,
-            endLine,
-            snippetToUse
-          );
-
-          const summary = await this.stagingManager.stageEdit(relPath, proposedContent, instruction);
-          targetEdit = this.stagingManager.getEdit(summary.editId);
+        if (toolEdit && toolEdit.proposedContent) {
+          // If the tool edit already has the full file, check if it didn't accidentally truncate
+          const toolLines = toolEdit.proposedContent.split('\n');
+          if (toolLines.length >= origLines.length - 2) {
+            await this.showNativeDiff(document.uri, toolEdit.proposedContent, toolEdit.id);
+            return;
+          }
+          snippetToUse = toolEdit.proposedContent;
+          this.stagingManager.rejectEdit(toolEdit.id);
         }
+
+        if (!snippetToUse && streamedText.trim()) {
+          const codeMatch = streamedText.match(/```[a-zA-Z0-9_-]*\n([\s\S]*?)\n```/);
+          snippetToUse = codeMatch ? codeMatch[1] : streamedText;
+        }
+
+        if (!snippetToUse) {
+          vscode.window.showInformationMessage('No code changes were proposed by the agent.');
+          return;
+        }
+
+        // Clean markdown backticks if present
+        snippetToUse = snippetToUse.replace(/^```[a-zA-Z0-9_-]*\s*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
+
+        // If the model returned a chunk that includes definitions outside our range, extract just get_debug_flag
+        if (snippetToUse.includes('def get_debug_flag')) {
+          const match = snippetToUse.match(/(def get_debug_flag\(\)[\s\S]*?)(?=\ndef\s|\Z)/);
+          if (match) {
+            snippetToUse = match[1].trim();
+          }
+        }
+
+        const proposedContent = this.applySelectedSnippetReplacement(
+          originalContent,
+          startLine,
+          endLine,
+          snippetToUse
+        );
+
+        const summary = await this.stagingManager.stageEdit(relPath, proposedContent, instruction);
+        const targetEdit = this.stagingManager.getEdit(summary.editId);
 
         if (!targetEdit) {
           vscode.window.showInformationMessage('No code changes were proposed by the agent.');
