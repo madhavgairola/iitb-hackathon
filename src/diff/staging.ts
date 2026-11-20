@@ -36,14 +36,26 @@ export class DiffStagingManager {
     }
 
     // Smart-merge snippet check:
-    // If original file is large, and proposedContent is an addition/snippet (much smaller and lacking file header),
-    // append it cleanly instead of deleting the whole existing codebase!
+    // If original file is large, and proposedContent is an addition/snippet (much smaller and lacking file header):
     let effectiveProposed = proposedContent;
     if (originalContent.length > 300 && proposedContent.length < originalContent.length * 0.7) {
       const origLines = originalContent.split('\n');
       const firstOrigLine = origLines.find((l) => l.trim().length > 0)?.trim() || '';
-      if (firstOrigLine && !proposedContent.includes(firstOrigLine) && !originalContent.includes(proposedContent.trim())) {
-        effectiveProposed = originalContent.trimEnd() + '\n\n' + proposedContent.trim() + '\n';
+      if (firstOrigLine && !proposedContent.includes(firstOrigLine)) {
+        // If snippet defines an existing function (e.g. get_debug_flag in Task A), replace in-place:
+        const funcNameMatch = proposedContent.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+        if (funcNameMatch && originalContent.includes(`def ${funcNameMatch[1]}`)) {
+          const fnName = funcNameMatch[1];
+          const fnStart = originalContent.indexOf(`def ${fnName}`);
+          if (fnStart !== -1) {
+            const afterFn = originalContent.indexOf('\ndef ', fnStart + 10);
+            const fnEnd = afterFn !== -1 ? afterFn : originalContent.length;
+            effectiveProposed = originalContent.slice(0, fnStart) + proposedContent.trim() + '\n\n' + originalContent.slice(fnEnd).trimStart();
+          }
+        } else {
+          // Otherwise it is a new function/command (e.g. config_command in Task B): append to file:
+          effectiveProposed = originalContent.trimEnd() + '\n\n' + proposedContent.trim() + '\n';
+        }
       }
     }
 
