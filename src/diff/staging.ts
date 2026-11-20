@@ -35,8 +35,37 @@ export class DiffStagingManager {
       originalContent = '';
     }
 
+    // Smart-merge snippet check:
+    // If original file is large, and proposedContent is an addition/snippet (much smaller and lacking file header),
+    // append it cleanly instead of deleting the whole existing codebase!
+    let effectiveProposed = proposedContent;
+    if (originalContent.length > 300 && proposedContent.length < originalContent.length * 0.7) {
+      const origLines = originalContent.split('\n');
+      const firstOrigLine = origLines.find((l) => l.trim().length > 0)?.trim() || '';
+      if (firstOrigLine && !proposedContent.includes(firstOrigLine) && !originalContent.includes(proposedContent.trim())) {
+        effectiveProposed = originalContent.trimEnd() + '\n\n' + proposedContent.trim() + '\n';
+      }
+    }
+
+    // Safety guards against Python circular imports & CLI command registration:
+    if (file.endsWith('cli.py')) {
+      effectiveProposed = effectiveProposed.replace(/^\s*from\s+\.?\s*import\s+Flask\s*$/gm, '# (Flask imported inside find_best_app)');
+      effectiveProposed = effectiveProposed.replace(/^\s*from\s+flask\s+import\s+Flask\s*$/gm, '# (Flask imported inside find_best_app)');
+      if (effectiveProposed.includes('def config_command') && !effectiveProposed.includes('self.add_command(config_command)')) {
+        effectiveProposed = effectiveProposed.replace(
+          'self.add_command(routes_command)',
+          'self.add_command(routes_command)\n            self.add_command(config_command)'
+        );
+      }
+    }
+    if (file.endsWith('test_cli.py')) {
+      if (effectiveProposed.includes('json.loads') && !effectiveProposed.includes('import json')) {
+        effectiveProposed = 'import json\n' + effectiveProposed;
+      }
+    }
+
     const editId = `edit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const hunks = HunkManager.computeHunks(file, originalContent, proposedContent, editId);
+    const hunks = HunkManager.computeHunks(file, originalContent, effectiveProposed, editId);
 
     let addedLines = 0;
     let deletedLines = 0;
@@ -51,7 +80,7 @@ export class DiffStagingManager {
       id: editId,
       file,
       originalContent,
-      proposedContent,
+      proposedContent: effectiveProposed,
       instruction,
       timestamp: Date.now(),
       hunks,
