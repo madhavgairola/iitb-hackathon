@@ -1,0 +1,212 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+
+    <linearGradient id="vscodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <linearGradient id="tfGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <linearGradient id="mcpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <linearGradient id="wsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b0764" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Filters for Glow / Shadows -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <filter id="blueGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Arrow Markers -->
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#38bdf8" />
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#a855f7" />
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#34d399" />
+    </marker>
+    <marker id="arrowAmber" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#fbbf24" />
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 700; fill: #f8fafc; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 400; fill: #94a3b8; font-size: 13px; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 600; font-size: 16px; }
+    .card-badge { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; font-weight: 600; }
+    .item-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #cbd5e1; }
+    .label-tag { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; font-weight: 600; }
+    .path-line { stroke-dasharray: 6,4; animation: dash 20s linear infinite; }
+  </style>
+
+  <!-- Background Canvas -->
+  <rect width="960" height="540" fill="url(#bgGrad)" rx="16" />
+  <rect width="958" height="538" x="1" y="1" fill="none" stroke="#334155" stroke-width="1.5" rx="16" />
+
+  <!-- Header Header / Title -->
+  <text x="40" y="44" class="title" font-size="20">TrueForge AI Coding Agent — System Architecture</text>
+  <text x="40" y="66" class="subtitle">Techfest 2026–27 TrueFoundry Forge-a-thon | 3-Process Architecture</text>
+
+  <!-- ========================================================================= -->
+  <!-- CARD 1: VS CODE EXTENSION HOST (TOP LEFT) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(40, 95)" filter="url(#cardShadow)">
+    <rect width="380" height="195" rx="12" fill="url(#vscodeGrad)" stroke="#0284c7" stroke-width="2" />
+    <!-- Header Badge -->
+    <rect x="16" y="14" width="85" height="22" rx="6" fill="#0369a1" fill-opacity="0.3" />
+    <text x="24" y="29" class="card-badge" fill="#38bdf8">PROCESS 1</text>
+    <text x="110" y="31" class="card-title" fill="#f0f9ff">VS Code Extension Host</text>
+
+    <!-- Sub-elements -->
+    <rect x="16" y="48" width="348" height="36" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="70" class="item-text" font-weight="600" fill="#38bdf8">UI Layer: </text>
+    <text x="86" y="70" class="item-text">Sidebar Webview (Chat, Timeline, Context)</text>
+
+    <rect x="16" y="92" width="348" height="36" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="114" class="item-text" font-weight="600" fill="#38bdf8">Inline Edit: </text>
+    <text x="96" y="114" class="item-text">Ctrl+K Controller &amp; Virtual Diff Provider</text>
+
+    <rect x="16" y="136" width="348" height="42" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="156" class="item-text" font-weight="600" fill="#fbbf24">Diff Safety Engine: </text>
+    <text x="145" y="156" class="item-text">In-Memory Staging Buffer</text>
+    <text x="28" y="171" class="subtitle" font-size="11" fill="#94a3b8">Zero Silent Writes | Myers Diff Hunks | Undo Stack</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CARD 2: TRUEFORGE DAEMON (TOP RIGHT) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(540, 95)" filter="url(#cardShadow)">
+    <rect width="380" height="195" rx="12" fill="url(#tfGrad)" stroke="#7c3aed" stroke-width="2" />
+    <!-- Header Badge -->
+    <rect x="16" y="14" width="85" height="22" rx="6" fill="#6d28d9" fill-opacity="0.3" />
+    <text x="24" y="29" class="card-badge" fill="#c084fc">PROCESS 2</text>
+    <text x="110" y="31" class="card-title" fill="#faf5ff">TrueForge Daemon (:8790)</text>
+
+    <!-- Sub-elements -->
+    <rect x="16" y="48" width="348" height="36" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="70" class="item-text" font-weight="600" fill="#c084fc">Master Agent Loop: </text>
+    <text x="145" y="70" class="item-text">Session Management &amp; Tool Router</text>
+
+    <rect x="16" y="92" width="348" height="36" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="114" class="item-text" font-weight="600" fill="#c084fc">Harness Features: </text>
+    <text x="135" y="114" class="item-text">Context Compaction &amp; SSE Streaming</text>
+
+    <rect x="16" y="136" width="348" height="42" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="156" class="item-text" font-weight="600" fill="#ec4899">Resilient Model Router: </text>
+    <text x="170" y="156" class="item-text">Primary: requesty/gpt-4o</text>
+    <text x="28" y="171" class="subtitle" font-size="11" fill="#94a3b8">Automatic Task C Failover to Secondary: gemini/gemini-2.5-pro</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CARD 3: LOCAL MCP SERVER (BOTTOM LEFT) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(40, 325)" filter="url(#cardShadow)">
+    <rect width="380" height="175" rx="12" fill="url(#mcpGrad)" stroke="#059669" stroke-width="2" />
+    <!-- Header Badge -->
+    <rect x="16" y="14" width="85" height="22" rx="6" fill="#047857" fill-opacity="0.3" />
+    <text x="24" y="29" class="card-badge" fill="#34d399">PROCESS 3</text>
+    <text x="110" y="31" class="card-title" fill="#ecfdf5">Local MCP Server (:4545)</text>
+
+    <!-- Sub-elements -->
+    <rect x="16" y="48" width="348" height="32" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="69" class="item-text" font-weight="600" fill="#34d399">Transport: </text>
+    <text x="96" y="69" class="item-text">HTTP / Server-Sent Events (SSE)</text>
+
+    <!-- 6 MCP Tools Grid -->
+    <g transform="translate(16, 88)">
+      <rect width="110" height="24" rx="4" fill="#022c22" stroke="#065f46" />
+      <text x="10" y="16" class="card-badge" fill="#6ee7b7">read_file</text>
+
+      <rect x="118" width="110" height="24" rx="4" fill="#022c22" stroke="#065f46" />
+      <text x="128" y="16" class="card-badge" fill="#6ee7b7">list_files</text>
+
+      <rect x="236" width="112" height="24" rx="4" fill="#022c22" stroke="#065f46" />
+      <text x="244" y="16" class="card-badge" fill="#6ee7b7">find_symbol</text>
+
+      <rect y="32" width="110" height="24" rx="4" fill="#022c22" stroke="#065f46" />
+      <text x="10" y="48" class="card-badge" fill="#6ee7b7">search_code</text>
+
+      <rect x="118" y="32" width="110" height="24" rx="4" fill="#451a03" stroke="#b45309" />
+      <text x="128" y="48" class="card-badge" fill="#fde68a">propose_edit</text>
+
+      <rect x="236" y="32" width="112" height="24" rx="4" fill="#022c22" stroke="#065f46" />
+      <text x="242" y="48" class="card-badge" fill="#6ee7b7">run_terminal</text>
+    </g>
+
+    <text x="16" y="162" class="subtitle" font-size="11" fill="#94a3b8">Exposes VS Code Workspace Capabilities via Model Context Protocol</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CARD 4: WORKSPACE ENVIRONMENT (BOTTOM RIGHT) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(540, 325)" filter="url(#cardShadow)">
+    <rect width="380" height="175" rx="12" fill="url(#wsGrad)" stroke="#9333ea" stroke-width="2" />
+    <rect x="16" y="14" width="85" height="22" rx="6" fill="#7e22ce" fill-opacity="0.3" />
+    <text x="24" y="29" class="card-badge" fill="#d8b4fe">TARGET</text>
+    <text x="110" y="31" class="card-title" fill="#faf5ff">Pallets Flask 3.1.3 (commit 22d92470)</text>
+
+    <rect x="16" y="48" width="348" height="32" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="69" class="item-text" font-weight="600" fill="#d8b4fe">Task A (Inline): </text>
+    <text x="125" y="69" class="item-text">src/flask/helpers.py (get_debug_flag)</text>
+
+    <rect x="16" y="86" width="348" height="32" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="107" class="item-text" font-weight="600" fill="#d8b4fe">Task B (Agent): </text>
+    <text x="125" y="107" class="item-text">src/flask/cli.py, tests/test_cli.py, docs/cli.rst</text>
+
+    <rect x="16" y="124" width="348" height="38" rx="6" fill="#0f172a" stroke="#1e293b" />
+    <text x="28" y="143" class="item-text" font-weight="600" fill="#34d399">Verification: </text>
+    <text x="105" y="143" class="item-text">pytest tests/test_cli.py -q (59 Passed)</text>
+    <text x="28" y="157" class="subtitle" font-size="11" fill="#94a3b8">FLASK_DEBUG=off python -c ... -&gt; False</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CONNECTING ARROWS & LABELS -->
+  <!-- ========================================================================= -->
+
+  <!-- Top Arrow: VS Code <---> TrueForge (Bi-directional SDK / SSE) -->
+  <path d="M 420 170 L 530 170" fill="none" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrowBlue)" />
+  <path d="M 540 190 L 430 190" fill="none" stroke="#c084fc" stroke-width="2.5" marker-end="url(#arrowPurple)" />
+  <rect x="432" y="145" width="96" height="20" rx="4" fill="#0f172a" stroke="#0284c7" stroke-width="1" />
+  <text x="440" y="159" class="label-tag" fill="#38bdf8">Turns (SDK)</text>
+  <rect x="435" y="196" width="90" height="20" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1" />
+  <text x="444" y="210" class="label-tag" fill="#c084fc">SSE Stream</text>
+
+  <!-- Vertical Left Arrow: VS Code <---> Local MCP Server -->
+  <path d="M 180 290 L 180 315" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arrowGreen)" />
+  <path d="M 240 325 L 240 298" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowAmber)" />
+  <rect x="190" y="295" width="95" height="18" rx="3" fill="#0f172a" stroke="#334155" />
+  <text x="195" y="308" class="label-tag" fill="#f59e0b" font-size="10">Stage Edits</text>
+
+  <!-- Diagonal Arrow: TrueForge ---> Local MCP Server (SSE Tool Calling) -->
+  <path d="M 680 290 C 680 320, 480 340, 430 355" fill="none" stroke="#a855f7" stroke-width="2.5" marker-end="url(#arrowPurple)" stroke-dasharray="5,4" />
+  <rect x="495" y="315" width="118" height="20" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1" />
+  <text x="502" y="329" class="label-tag" fill="#c084fc">MCP Tool Calls</text>
+
+  <!-- Bottom Arrow: Local MCP Server ---> Workspace -->
+  <path d="M 420 420 L 530 420" fill="none" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrowGreen)" />
+  <rect x="432" y="408" width="96" height="20" rx="4" fill="#0f172a" stroke="#059669" stroke-width="1" />
+  <text x="442" y="422" class="label-tag" fill="#34d399">Apply Edits</text>
+
+</svg>
