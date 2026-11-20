@@ -142,7 +142,11 @@ def config_command(show_secrets: bool) -> None:
 `;
 
     if (!modCli.includes('def config_command')) {
-      modCli = modCli + configCommandCode;
+      if (modCli.includes('cli = FlaskGroup(')) {
+        modCli = modCli.replace('cli = FlaskGroup(', configCommandCode + '\n\ncli = FlaskGroup(');
+      } else {
+        modCli = modCli + configCommandCode;
+      }
     }
 
     const cliSummary = await this.staging.stageEdit(
