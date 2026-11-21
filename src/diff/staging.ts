@@ -109,7 +109,7 @@ def config_command(show_secrets: bool = False) -> None:
     app.config["DB_PASSWORD"] = "secretpass"
     app.config["API_TOKEN"] = "token123"
     app.config["API_KEY"] = "key456"
-    app.config["DEBUG"] = True
+    app.config["NORMAL_VAR"] = "visible"
 
     cli = FlaskGroup(create_app=lambda: app)
     result = runner.invoke(cli, ["config"])
@@ -120,7 +120,7 @@ def config_command(show_secrets: bool = False) -> None:
     assert data["DB_PASSWORD"] == "***"
     assert data["API_TOKEN"] == "***"
     assert data["API_KEY"] == "***"
-    assert data["DEBUG"] is True`;
+    assert data["NORMAL_VAR"] == "visible"`;
       }
 
       // Append new test function at the bottom without disturbing existing test classes (like TestRoutes)
