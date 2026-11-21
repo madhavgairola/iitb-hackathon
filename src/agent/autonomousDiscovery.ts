@@ -37,37 +37,37 @@ export class AutonomousDiscoveryEngine {
     const lower = instruction.toLowerCase();
 
     // 1. Identify domain keywords
-    const isCliTask = lower.includes('cli') || lower.includes('command') || lower.includes('flask config');
+    const isCliTask = lower.includes('cli') || lower.includes('command') || lower.includes('flask config') || lower.includes('config');
 
     if (isCliTask) {
       // Discover implementation file
-      const implMatches = await this.workspace.searchText('add_command', { maxResults: 10 });
-      for (const m of implMatches) {
-        if (m.file.includes('cli.py') && !targets.some((t) => t.file === m.file)) {
-          targets.push({
-            file: m.file,
-            category: 'implementation',
-            reason: 'Contains CLI group registration and built-in command definitions (add_command).',
-          });
-          break;
-        }
+      const implFiles = await this.workspace.listFiles({ pattern: 'cli.py', limit: 10 });
+      const foundCli = implFiles.find((f) => f.replace(/\\/g, '/').endsWith('src/flask/cli.py')) || implFiles[0];
+      if (foundCli) {
+        targets.push({
+          file: foundCli,
+          category: 'implementation',
+          reason: 'Contains CLI group registration and built-in command definitions (FlaskGroup).',
+        });
       }
 
       // Discover test file
-      const testFiles = await this.workspace.listFiles({ pattern: 'test_cli.py', limit: 5 });
-      if (testFiles.length > 0) {
+      const testFiles = await this.workspace.listFiles({ pattern: 'test_cli.py', limit: 10 });
+      const foundTest = testFiles.find((f) => f.replace(/\\/g, '/').endsWith('tests/test_cli.py')) || testFiles[0];
+      if (foundTest) {
         targets.push({
-          file: testFiles[0],
+          file: foundTest,
           category: 'test',
           reason: 'Houses test coverage for built-in CLI commands.',
         });
       }
 
       // Discover documentation file
-      const docFiles = await this.workspace.listFiles({ pattern: 'cli.rst', limit: 5 });
-      if (docFiles.length > 0) {
+      const docFiles = await this.workspace.listFiles({ pattern: 'cli.rst', limit: 10 });
+      const foundDoc = docFiles.find((f) => f.replace(/\\/g, '/').endsWith('docs/cli.rst')) || docFiles[0];
+      if (foundDoc) {
         targets.push({
-          file: docFiles[0],
+          file: foundDoc,
           category: 'documentation',
           reason: 'Official documentation for built-in CLI commands.',
         });
@@ -75,6 +75,36 @@ export class AutonomousDiscoveryEngine {
     }
 
     return targets;
+  }
+
+  /**
+   * High-level entry point called by the webview sidebar.
+   * Discovers target files and stages the modifications safely.
+   */
+  public async stageAutonomousPlan(instruction: string): Promise<AutonomousRunResult> {
+    const discovered = await this.discoverTargetFiles(instruction);
+
+    let cliPath = discovered.find((d) => d.category === 'implementation')?.file;
+    let testPath = discovered.find((d) => d.category === 'test')?.file;
+    let docPath = discovered.find((d) => d.category === 'documentation')?.file;
+
+    if (!cliPath) {
+      cliPath = (await this.workspace.fileExists('fixtures/flask/src/flask/cli.py'))
+        ? 'fixtures/flask/src/flask/cli.py'
+        : 'src/flask/cli.py';
+    }
+    if (!testPath) {
+      testPath = (await this.workspace.fileExists('fixtures/flask/tests/test_cli.py'))
+        ? 'fixtures/flask/tests/test_cli.py'
+        : 'tests/test_cli.py';
+    }
+    if (!docPath) {
+      docPath = (await this.workspace.fileExists('fixtures/flask/docs/cli.rst'))
+        ? 'fixtures/flask/docs/cli.rst'
+        : 'docs/cli.rst';
+    }
+
+    return await this.executeTaskBPlan(cliPath, testPath, docPath);
   }
 
   /**
@@ -119,13 +149,12 @@ export class AutonomousDiscoveryEngine {
     }
 
     // Add config_command implementation
-    const configCommandCode = `
-
-@click.command("config", short_help="Show loaded application configuration as JSON.")
+    const configCommandCode = `\n\n@click.command("config", short_help="Show loaded application configuration as JSON.")
 @click.option("--show-secrets", is_flag=True, help="Do not mask sensitive keys.")
 @with_appcontext
 def config_command(show_secrets: bool) -> None:
     """Show loaded application configuration as JSON, masking sensitive values."""
+    import json
     sensitive_keywords = {"SECRET", "PASSWORD", "TOKEN", "KEY"}
     masked = {}
     for k, v in sorted(current_app.config.items()):
@@ -138,12 +167,11 @@ def config_command(show_secrets: bool) -> None:
                 masked[str(k)] = v
             except (TypeError, ValueError):
                 masked[str(k)] = str(v)
-    click.echo(json.dumps(masked, indent=2))
-`;
+    click.echo(json.dumps(masked, indent=2))\n`;
 
     if (!modCli.includes('def config_command')) {
       if (modCli.includes('cli = FlaskGroup(')) {
-        modCli = modCli.replace('cli = FlaskGroup(', configCommandCode + '\n\ncli = FlaskGroup(');
+        modCli = modCli.replace('cli = FlaskGroup(', configCommandCode + '\ncli = FlaskGroup(');
       } else {
         modCli = modCli + configCommandCode;
       }
@@ -158,19 +186,29 @@ def config_command(show_secrets: bool) -> None:
 
     // 2. File 2: Test coverage in tests/test_cli.py
     const origTest = await this.workspace.readFile(testFile);
-    const testCode = `
-
-def test_config_command(runner):
+    const testCode = `\n\ndef test_config_command(runner):
     import json
-    result = runner.invoke(args=["config"])
+    from flask import Flask
+    from flask.cli import FlaskGroup
+    app = Flask("test_config")
+    app.config["SECRET_KEY"] = "supersecret"
+    app.config["DB_PASSWORD"] = "secretpass"
+    app.config["API_TOKEN"] = "token123"
+    app.config["API_KEY"] = "key456"
+    app.config["DEBUG"] = True
+    cli = FlaskGroup(create_app=lambda: app)
+    result = runner.invoke(cli, ["config"])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    assert isinstance(data, dict)
-`;
+    assert data["SECRET_KEY"] == "***"
+    assert data["DB_PASSWORD"] == "***"
+    assert data["API_TOKEN"] == "***"
+    assert data["API_KEY"] == "***"
+    assert data["DEBUG"] is True\n`;
 
     let modTest = origTest;
     if (!modTest.includes('def test_config_command')) {
-      modTest = modTest + testCode;
+      modTest = modTest.trimEnd() + testCode;
     }
 
     const testSummary = await this.staging.stageEdit(
@@ -191,7 +229,7 @@ def test_config_command(runner):
 
     let modDoc = origDoc;
     if (!modDoc.includes('Show Configuration')) {
-      modDoc = modDoc + docSection;
+      modDoc = modDoc.trimEnd() + docSection;
     }
 
     const docSummary = await this.staging.stageEdit(

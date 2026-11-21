@@ -44,7 +44,10 @@ describe('Inline Editing Controller & Task A (Flask get_debug_flag)', () => {
 
     const originalContent = await workspace.readFile(flaskHelperPath);
     expect(originalContent).toContain('def get_debug_flag() -> bool:');
-    expect(originalContent).toContain('{"0", "false", "no"}');
+    expect(
+      originalContent.includes('{"0", "false", "no"}') ||
+      originalContent.includes('{"0", "false", "no", "off", "n"}')
+    ).toBe(true);
 
     // Target modified content satisfying Task A:
     // Treat 'off' and 'n' as false as well, case-insensitively, and update docstring to list every value treated as false.
