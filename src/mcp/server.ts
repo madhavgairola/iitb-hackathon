@@ -70,15 +70,21 @@ export class LocalMcpServer {
 
         const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
-        // Health check endpoint
-        if (url.pathname === '/health' && req.method === 'GET') {
+        // Health check endpoint (serves both / and /health)
+        if ((url.pathname === '/' || url.pathname === '/health') && req.method === 'GET') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(
             JSON.stringify({
-              status: 'ok',
-              name: 'vscode-editor-mcp',
-              tools: TOOL_DEFINITIONS.map((t) => t.name),
-            })
+              status: 'online',
+              server: 'TrueForge VS Code Editor MCP Server',
+              protocol: 'Model Context Protocol (MCP) HTTP/SSE',
+              sse_endpoint: `http://localhost:${this.port}/sse`,
+              messages_endpoint: `http://localhost:${this.port}/messages`,
+              tools: TOOL_DEFINITIONS.map((t) => ({
+                name: t.name,
+                description: t.description,
+              })),
+            }, null, 2)
           );
           return;
         }
