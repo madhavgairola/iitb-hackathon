@@ -306,7 +306,7 @@ export class TrueForgeAgentViewProvider implements vscode.WebviewViewProvider {
       await this.harnessClient.ensureAgent(
         agentName,
         systemInstructions,
-        ['vscode-editor'],
+        [],
         modelOverride
       );
     } catch (err: any) {

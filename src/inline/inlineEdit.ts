@@ -105,7 +105,7 @@ export class InlineEditController {
         await this.harnessClient.ensureAgent(
           agentName,
           'You are an inline code editor assistant. Modify code precisely according to user instructions.',
-          ['vscode-editor']
+          []
         );
 
         const sessionId = await this.harnessClient.getOrCreateSession(agentName);
