@@ -144,9 +144,53 @@ export class InlineEditController {
             currentUrl.includes('9998') ||
             currentUrl.includes('9999'));
 
-        if (isDeadOrOffline || turnResult.usedFallback) {
+        if (isDeadOrOffline) {
           vscode.window.showInformationMessage(
             `TrueForge: Intercepted dead connection on [${currentUrl}]. Triggering automatic failover to ${this.harnessClient.getFallbackModel()}...`
+          );
+
+          // Automatic resilience failover to healthy TrueForge daemon backup endpoint
+          const backupUrl = 'http://localhost:8790';
+          if (currentUrl !== backupUrl) {
+            try {
+              const fallbackClient = new TrueForgeHarnessClient({
+                baseUrl: backupUrl,
+                primaryModel: this.harnessClient.getFallbackModel() || 'gemini/gemini-2.5-pro',
+                fallbackModel: this.harnessClient.getPrimaryModel() || 'requesty/gpt-4o',
+              });
+
+              await fallbackClient.ensureAgent(
+                agentName,
+                'You are an inline code editor assistant. Modify code precisely according to user instructions.',
+                [],
+                this.harnessClient.getFallbackModel() || 'gemini/gemini-2.5-pro'
+              );
+
+              const fbSessionId = await fallbackClient.getOrCreateSession(agentName);
+              const fbPrompt = this.buildInlinePrompt(relPath, startLine, endLine, selectedText, instruction);
+
+              streamedText = '';
+              const fbResult = await fallbackClient.executeTurn(
+                fbSessionId,
+                agentName,
+                fbPrompt,
+                async (event: any) => {
+                  if (event.type === 'model.message.delta' || event.type === 'model_message_delta') {
+                    streamedText += event.content ?? event.delta?.content ?? '';
+                  }
+                }
+              );
+
+              if (fbResult.success) {
+                turnResult = fbResult;
+              }
+            } catch (fbErr) {
+              console.warn('Backup failover turn failed:', fbErr);
+            }
+          }
+        } else if (turnResult.usedFallback) {
+          vscode.window.showInformationMessage(
+            `TrueForge: Model provider error intercepted. Automatically fell back to secondary model [${this.harnessClient.getFallbackModel()}].`
           );
         } else if (!turnResult.success) {
           vscode.window.showErrorMessage(`Inline edit failed: ${turnResult.error}`);
@@ -179,25 +223,6 @@ export class InlineEditController {
         if (!snippetToUse && streamedText.trim()) {
           const codeMatch = streamedText.match(/```[a-zA-Z0-9_-]*\n([\s\S]*?)\n```/);
           snippetToUse = codeMatch ? codeMatch[1] : streamedText;
-        }
-
-        // Offline / Dead Endpoint Fallback model synthesis:
-        if (!snippetToUse && (isDeadOrOffline || turnResult.usedFallback)) {
-          if (
-            relPath.includes('helpers.py') ||
-            selectedText.includes('get_debug_flag') ||
-            instruction.toLowerCase().includes('off') ||
-            instruction.toLowerCase().includes('false')
-          ) {
-            snippetToUse = `def get_debug_flag() -> bool:
-    """Get whether debug mode should be enabled for the app, indicated by the
-    :envvar:\`FLASK_DEBUG\` environment variable. The values treated as false,
-    case-insensitively, are \`\`0\`\`, \`\`false\`\`, \`\`no\`\`, \`\`off\`\`, and \`\`n\`\`.
-    The default is \`\`False\`\`.
-    """
-    val = os.environ.get("FLASK_DEBUG")
-    return bool(val and val.lower() not in {"0", "false", "no", "off", "n"})`;
-          }
         }
 
         if (!snippetToUse) {
