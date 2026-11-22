@@ -186,16 +186,17 @@ def config_command(show_secrets: bool) -> None:
 
     // 2. File 2: Test coverage in tests/test_cli.py
     const origTest = await this.workspace.readFile(testFile);
-    const testCode = `\n\ndef test_config_command(runner):
+    const testCode = `\n\ndef test_config_command(runner, monkeypatch):
     import json
     from flask import Flask
     from flask.cli import FlaskGroup
+    monkeypatch.delenv("FLASK_DEBUG", raising=False)
     app = Flask("test_config")
     app.config["SECRET_KEY"] = "supersecret"
     app.config["DB_PASSWORD"] = "secretpass"
     app.config["API_TOKEN"] = "token123"
     app.config["API_KEY"] = "key456"
-    app.config["DEBUG"] = True
+    app.config["NORMAL_VAR"] = "visible"
     cli = FlaskGroup(create_app=lambda: app)
     result = runner.invoke(cli, ["config"])
     assert result.exit_code == 0
@@ -204,7 +205,7 @@ def config_command(show_secrets: bool) -> None:
     assert data["DB_PASSWORD"] == "***"
     assert data["API_TOKEN"] == "***"
     assert data["API_KEY"] == "***"
-    assert data["DEBUG"] is True\n`;
+    assert data["NORMAL_VAR"] == "visible"\n`;
 
     let modTest = origTest;
     if (!modTest.includes('def test_config_command')) {

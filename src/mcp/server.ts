@@ -75,15 +75,13 @@ export class LocalMcpServer {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(
             JSON.stringify({
-              status: 'online',
+              status: 'ok',
+              name: 'vscode-editor-mcp',
               server: 'TrueForge VS Code Editor MCP Server',
               protocol: 'Model Context Protocol (MCP) HTTP/SSE',
               sse_endpoint: `http://localhost:${this.port}/sse`,
               messages_endpoint: `http://localhost:${this.port}/messages`,
-              tools: TOOL_DEFINITIONS.map((t) => ({
-                name: t.name,
-                description: t.description,
-              })),
+              tools: TOOL_DEFINITIONS.map((t) => t.name),
             }, null, 2)
           );
           return;

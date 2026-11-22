@@ -99,11 +99,12 @@ def config_command(show_secrets: bool = False) -> None:
         cleanSnippet.includes('config') &&
         (cleanSnippet.includes('obj=app') || !cleanSnippet.includes('FlaskGroup'))
       ) {
-        cleanSnippet = `def test_config_command(runner):
+        cleanSnippet = `def test_config_command(runner, monkeypatch):
     import json
     from flask import Flask
     from flask.cli import FlaskGroup
 
+    monkeypatch.delenv("FLASK_DEBUG", raising=False)
     app = Flask("test_config")
     app.config["SECRET_KEY"] = "supersecret"
     app.config["DB_PASSWORD"] = "secretpass"
