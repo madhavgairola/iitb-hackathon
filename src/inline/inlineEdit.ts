@@ -90,6 +90,8 @@ export class InlineEditController {
       return;
     }
 
+    let stagedTarget: { uri: vscode.Uri; content: string; id: string } | undefined;
+
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -183,10 +185,17 @@ export class InlineEditController {
           return;
         }
 
-        // Render Native VS Code Diff
-        await this.showNativeDiff(document.uri, targetEdit.proposedContent, targetEdit.id);
+        stagedTarget = {
+          uri: document.uri,
+          content: targetEdit.proposedContent,
+          id: targetEdit.id,
+        };
       }
     );
+
+    if (stagedTarget) {
+      await this.showNativeDiff(stagedTarget.uri, stagedTarget.content, stagedTarget.id);
+    }
   }
 
   /**
@@ -207,21 +216,74 @@ export class InlineEditController {
     const title = `${path.basename(fileUri.fsPath)} (Proposed Edit)`;
     await vscode.commands.executeCommand('vscode.diff', fileUri, previewUri, title);
 
-    // Prompt user with Accept / Reject action
-    const choice = await vscode.window.showInformationMessage(
-      `Proposed modification staged for ${path.basename(fileUri.fsPath)}. Accept or Reject?`,
-      'Accept Changes',
-      'Reject Changes'
-    );
+    // Create persistent Status Bar Buttons so the user can always click Accept / Reject
+    const acceptBtn = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
+    acceptBtn.text = `$(check) Accept (${path.basename(fileUri.fsPath)})`;
+    acceptBtn.tooltip = 'Apply proposed changes to disk';
+    acceptBtn.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
 
-    if (choice === 'Accept Changes') {
+    const rejectBtn = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 999);
+    rejectBtn.text = `$(x) Reject`;
+    rejectBtn.tooltip = 'Discard proposed changes';
+
+    acceptBtn.show();
+    rejectBtn.show();
+
+    let resolved = false;
+
+    const cleanup = () => {
+      resolved = true;
+      acceptBtn.dispose();
+      rejectBtn.dispose();
+      diffProvider.removeContent(previewUri);
+    };
+
+    const applyChanges = async () => {
+      if (resolved) return;
+      cleanup();
       await this.stagingManager.applyEdit(editId, true);
-      diffProvider.removeContent(previewUri);
       vscode.window.showInformationMessage(`Applied proposed changes to ${path.basename(fileUri.fsPath)}`);
-    } else if (choice === 'Reject Changes') {
+    };
+
+    const rejectChanges = async () => {
+      if (resolved) return;
+      cleanup();
       this.stagingManager.rejectEdit(editId);
-      diffProvider.removeContent(previewUri);
       vscode.window.showInformationMessage(`Rejected proposed changes.`);
+    };
+
+    const acceptCmd = vscode.commands.registerCommand(`trueforge.acceptInline_${editId}`, applyChanges);
+    const rejectCmd = vscode.commands.registerCommand(`trueforge.rejectInline_${editId}`, rejectChanges);
+    acceptBtn.command = `trueforge.acceptInline_${editId}`;
+    rejectBtn.command = `trueforge.rejectInline_${editId}`;
+
+    // Keep notification visible until user makes an explicit decision
+    while (!resolved) {
+      const choice = await vscode.window.showInformationMessage(
+        `Proposed modification staged for ${path.basename(fileUri.fsPath)}. Accept or Reject?`,
+        'Accept Changes',
+        'Reject Changes'
+      );
+
+      if (choice === 'Accept Changes') {
+        await applyChanges();
+        break;
+      } else if (choice === 'Reject Changes') {
+        await rejectChanges();
+        break;
+      }
+
+      // If user closed or it timed out, check if diff editor is still open; if closed, exit
+      const isDiffStillOpen = vscode.window.visibleTextEditors.some((e) =>
+        e.document.uri.toString().includes(editId)
+      );
+      if (!isDiffStillOpen) {
+        cleanup();
+        break;
+      }
     }
+
+    acceptCmd.dispose();
+    rejectCmd.dispose();
   }
 }
