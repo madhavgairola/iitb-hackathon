@@ -39,6 +39,28 @@ export async function activate(context: vscode.ExtensionContext) {
   statusBarIndicator.start();
   context.subscriptions.push({ dispose: () => statusBarIndicator?.dispose() });
 
+  // Listen for configuration changes (e.g. dead endpoint simulation in Task C)
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('trueforge')) {
+        const updatedConfig = vscode.workspace.getConfiguration('trueforge');
+        const newUrl = updatedConfig.get<string>('serverUrl') || 'http://localhost:8790';
+        const newPrimary = updatedConfig.get<string>('primaryModel') || 'requesty/gpt-4o';
+        const newFallback = updatedConfig.get<string>('secondaryModel') || 'gemini/gemini-2.5-pro';
+        if (harnessClient) {
+          harnessClient.updateConfig({
+            baseUrl: newUrl,
+            primaryModel: newPrimary,
+            fallbackModel: newFallback,
+          });
+        }
+        if (statusBarIndicator) {
+          statusBarIndicator.refresh();
+        }
+      }
+    })
+  );
+
   // Register TrueForge Diff Preview Text Document Content Provider
   const diffProvider = TrueForgeDiffContentProvider.getInstance();
   context.subscriptions.push(

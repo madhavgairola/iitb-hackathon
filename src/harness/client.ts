@@ -27,6 +27,30 @@ export class TrueForgeHarnessClient {
     });
   }
 
+  public getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  public getPrimaryModel(): string {
+    return this.primaryModel;
+  }
+
+  public getFallbackModel(): string {
+    return this.fallbackModel;
+  }
+
+  public updateConfig(config: HarnessConfig): void {
+    if (config.baseUrl) {
+      this.baseUrl = config.baseUrl;
+      this.client = new TrueForge({
+        baseUrl: this.baseUrl,
+        token: config.token,
+      });
+    }
+    if (config.primaryModel) this.primaryModel = config.primaryModel;
+    if (config.fallbackModel) this.fallbackModel = config.fallbackModel;
+  }
+
   /**
    * Health check to ensure TrueForge local harness server is reachable.
    */

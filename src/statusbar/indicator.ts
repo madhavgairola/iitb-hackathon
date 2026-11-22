@@ -38,6 +38,10 @@ export class TrueForgeStatusBarIndicator {
     }
   }
 
+  public refresh(): void {
+    this.updateStatus();
+  }
+
   public dispose(): void {
     if (this.timer) {
       clearInterval(this.timer);
