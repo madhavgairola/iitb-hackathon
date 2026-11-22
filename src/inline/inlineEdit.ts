@@ -142,7 +142,11 @@ export class InlineEditController {
           // If the tool edit already has the full file, check if it didn't accidentally truncate
           const toolLines = toolEdit.proposedContent.split('\n');
           if (toolLines.length >= origLines.length - 2) {
-            await this.showNativeDiff(document.uri, toolEdit.proposedContent, toolEdit.id);
+            stagedTarget = {
+              uri: document.uri,
+              content: toolEdit.proposedContent,
+              id: toolEdit.id,
+            };
             return;
           }
           snippetToUse = toolEdit.proposedContent;
@@ -207,9 +211,11 @@ export class InlineEditController {
     editId: string
   ): Promise<void> {
     const diffProvider = TrueForgeDiffContentProvider.getInstance();
-    const previewUri = vscode.Uri.parse(
-      `${TrueForgeDiffContentProvider.SCHEME}:${fileUri.fsPath}?editId=${editId}`
-    );
+    const previewUri = vscode.Uri.from({
+      scheme: TrueForgeDiffContentProvider.SCHEME,
+      path: fileUri.path,
+      query: `editId=${editId}`,
+    });
 
     diffProvider.setContent(previewUri, proposedContent);
 
@@ -257,8 +263,44 @@ export class InlineEditController {
     acceptBtn.command = `trueforge.acceptInline_${editId}`;
     rejectBtn.command = `trueforge.rejectInline_${editId}`;
 
-    // Keep notification visible until user makes an explicit decision
+    const isDiffStillOpen = (): boolean => {
+      // 1. Check open tab groups
+      try {
+        for (const group of vscode.window.tabGroups.all) {
+          for (const tab of group.tabs) {
+            if (tab.input instanceof vscode.TabInputTextDiff) {
+              const mod = tab.input.modified.toString();
+              const orig = tab.input.original.toString();
+              if (
+                mod === previewUri.toString() ||
+                mod.includes(editId) ||
+                orig === fileUri.toString()
+              ) {
+                return true;
+              }
+            }
+          }
+        }
+      } catch {
+        // Fallback if tabGroups API is not available
+      }
+
+      // 2. Fallback check visible text editors
+      return vscode.window.visibleTextEditors.some(
+        (e) =>
+          e.document.uri.toString() === previewUri.toString() ||
+          e.document.uri.toString().includes(editId) ||
+          e.document.uri.fsPath === fileUri.fsPath
+      );
+    };
+
+    // Keep notification and buttons visible until user makes an explicit decision
     while (!resolved) {
+      if (!isDiffStillOpen()) {
+        cleanup();
+        break;
+      }
+
       const choice = await vscode.window.showInformationMessage(
         `Proposed modification staged for ${path.basename(fileUri.fsPath)}. Accept or Reject?`,
         'Accept Changes',
@@ -273,14 +315,13 @@ export class InlineEditController {
         break;
       }
 
-      // If user closed or it timed out, check if diff editor is still open; if closed, exit
-      const isDiffStillOpen = vscode.window.visibleTextEditors.some((e) =>
-        e.document.uri.toString().includes(editId)
-      );
-      if (!isDiffStillOpen) {
+      // If user did not click Accept/Reject or VS Code toast timed out after 15s:
+      // Re-check if diff tab is still open
+      if (!isDiffStillOpen()) {
         cleanup();
         break;
       }
+      // Diff tab is still open: loop continues so the prompt stays visible!
     }
 
     acceptCmd.dispose();
