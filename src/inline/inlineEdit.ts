@@ -153,17 +153,21 @@ export class InlineEditController {
           const backupUrl = 'http://localhost:8790';
           if (currentUrl !== backupUrl) {
             try {
+              // Normalize fallback model (TrueForge model names require hyphens instead of dots)
+              const rawFallback = this.harnessClient.getFallbackModel() || 'gemini/gemini-2.5-pro';
+              const normalizedFallback = rawFallback.replace(/\./g, '-');
+
               const fallbackClient = new TrueForgeHarnessClient({
                 baseUrl: backupUrl,
-                primaryModel: this.harnessClient.getFallbackModel() || 'gemini/gemini-2.5-pro',
-                fallbackModel: this.harnessClient.getPrimaryModel() || 'requesty/gpt-4o',
+                primaryModel: normalizedFallback,
+                fallbackModel: 'requesty/gpt-4o',
               });
 
               await fallbackClient.ensureAgent(
                 agentName,
                 'You are an inline code editor assistant. Modify code precisely according to user instructions.',
                 [],
-                this.harnessClient.getFallbackModel() || 'gemini/gemini-2.5-pro'
+                normalizedFallback
               );
 
               const fbSessionId = await fallbackClient.getOrCreateSession(agentName);
@@ -181,8 +185,26 @@ export class InlineEditController {
                 }
               );
 
-              if (fbResult.success) {
+              if (fbResult.success && streamedText.trim()) {
                 turnResult = fbResult;
+              } else {
+                // If secondary model provider has issue, retry with live daemon model
+                console.warn('Retrying failover turn with live daemon primary model:', fbResult.error);
+                await fallbackClient.switchAgentModel(agentName, 'requesty/gpt-4o');
+                streamedText = '';
+                const retryResult = await fallbackClient.executeTurn(
+                  fbSessionId,
+                  agentName,
+                  fbPrompt,
+                  async (event: any) => {
+                    if (event.type === 'model.message.delta' || event.type === 'model_message_delta') {
+                      streamedText += event.content ?? event.delta?.content ?? '';
+                    }
+                  }
+                );
+                if (retryResult.success) {
+                  turnResult = retryResult;
+                }
               }
             } catch (fbErr) {
               console.warn('Backup failover turn failed:', fbErr);
